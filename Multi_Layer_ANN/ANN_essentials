@@ -4,13 +4,16 @@ from sklearn.model_selection import train_test_split
 
 class Multi_Layer_ANN:
     
-    def __init__(self, X_train, Y_train, hidden_layers, activations):
+    def __init__(self, X_train, Y_train, hidden_layers, activations, loss='binary_crossentropy'):
         
         
         self.layers = [X_train.shape[1]] + hidden_layers + [1]  
         self.activations = activations 
         self.weights = []
         self.biases = []
+        
+        self.loss = loss
+        self.loss_func = self.binary_crossentropy
         
         np.random.seed(42)  # For reproducibility
         
@@ -19,7 +22,29 @@ class Multi_Layer_ANN:
             bias_vector = np.zeros((1, self.layers[i + 1]))
             self.weights.append(weight_matrix)
             self.biases.append(bias_vector)
+            
+    def choose_loss(self):
+        if self.loss=='binary_crossentropy':
+            self.loss_func = self.binary_crossentropy
+            self.loss_derivative = self.binary_crossentropy_derivative
+        elif self.loss == 'mse' or self.loss == 'MSE':
+            self.loss_func = self.mse
+            self.loss_derivative = self.mse_derivative
+        else:
+            raise ValueError("Unsupported Loss Function: {}".format(self.loss))
+        
+    def binary_crossentropy(self, y_true, y_pred):
+        return -np.mean(y_true * np.log(y_pred + 1e-8) + (1 - y_true) * np.log(1 - y_pred + 1e-8))
+
+    def binary_crossentropy_derivative(self, y_true, y_pred):
+        return -(y_true / (y_pred + 1e-8)) + (1 - y_true) / (1 - y_pred + 1e-8)
     
+    def mse(self, y_true, y_pred):
+        return np.mean((y_true - y_pred) ** 2) 
+    
+    def mse_derivative(self, y_true, y_pred):
+        return 2 * (y_pred - y_true) / y_true.size    
+        
     def activation(self, x, func):
         
         if func == 'relu':
@@ -78,16 +103,15 @@ class Multi_Layer_ANN:
             self.weights[i] += activations[i].T.dot(deltas[i]) * learning_rate
             self.biases[i] += np.sum(deltas[i], axis=0, keepdims=True) * learning_rate
             
-    def fit(self):
-        epochs = 1000
-        learning_rate = 0.05
+    def fit(self, epochs, learning_rate):
+        
         
         for epoch in range(epochs):
             activations, Z_values = self.forward_propagation(X_train)
             self.backpropagation(X_train, y_train, activations, Z_values, learning_rate)
             
             # Compute and print loss
-            loss = -np.mean(y_train * np.log(activations[-1] + 1e-8) + (1 - y_train) * np.log(1 - activations[-1] + 1e-8)) # Binary Cross Entropy
+            loss = self.loss_func(y_train, activations[-1])
             
             if epoch % 10 == 0:
                 print(f"Epoch {epoch}, Loss: {loss:.4f}")
@@ -118,7 +142,7 @@ if __name__ == "__main__":
 
     ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations)
     
-    ann.fit()
+    ann.fit(epochs = 1000, learning_rate = 0.05)
     
     # Predict and evaluate
     y_pred = ann.predict(X_test)
