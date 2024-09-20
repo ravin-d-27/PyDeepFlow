@@ -49,9 +49,9 @@ class ANN:
         hidden_error = d_output.dot(self.weights_hidden_output.T)
         d_hidden = hidden_error * self.relu_derivative(a_hidden)  
         
-        # Debug: Check the gradients
-        print("Gradients for output layer:", d_output)
-        print("Gradients for hidden layer:", d_hidden)
+        # # Debug: Check the gradients
+        # print("Gradients for output layer:", d_output)
+        # print("Gradients for hidden layer:", d_hidden)
 
         # Update weights and biases
         self.weights_hidden_output += a_hidden.T.dot(d_output) * learning_rate
@@ -61,10 +61,10 @@ class ANN:
         self.bias_hidden += np.sum(d_hidden, axis=0, keepdims=True) * learning_rate
 
         # Debug: Check updated weights and biases
-        print("Updated weights from hidden to output:", self.weights_hidden_output)
-        print("Updated bias for output:", self.bias_output)
-        print("Updated weights from input to hidden:", self.weights_input_hidden)
-        print("Updated bias for hidden layer:", self.bias_hidden)
+        # print("Updated weights from hidden to output:", self.weights_hidden_output)
+        # print("Updated bias for output:", self.bias_output)
+        # print("Updated weights from input to hidden:", self.weights_input_hidden)
+        # print("Updated bias for hidden layer:", self.bias_hidden)
 
     def predict(self, X):
         _, a_output = self.forward_propagation(X)
@@ -80,6 +80,11 @@ if __name__ == "__main__":
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     y_train = y_train.ravel()
+    
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     # Initialize ANN
     ann = ANN(X_train, y_train)
