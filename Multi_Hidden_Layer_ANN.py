@@ -118,8 +118,7 @@ if __name__ == "__main__":
     # Predict and evaluate
     y_pred = ann.predict(X_test)
     print(y_pred)
-    # for i in range(len(y_pred)):
-    #     print(y_pred[i],"-----",y_test[i])
+
     
     accuracy = np.mean(y_pred == y_test)
     print(f"Test Accuracy: {accuracy * 100:.2f}%")
