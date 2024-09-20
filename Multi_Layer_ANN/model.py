@@ -1,4 +1,3 @@
-# model.py
 import numpy as np
 from activations import activation, activation_derivative
 from losses import get_loss_function, get_loss_derivative

@@ -1,4 +1,3 @@
-# losses.py
 import numpy as np
 
 def binary_crossentropy(y_true, y_pred):

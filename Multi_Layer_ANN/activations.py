@@ -1,4 +1,3 @@
-# activations.py
 import numpy as np
 
 def activation(x, func):
