@@ -131,8 +131,8 @@ To further extend the model’s functionality, the following enhancements will b
 4. **Early Stopping**:
    - Stop training when there is no significant improvement in validation loss to prevent overfitting and reduce unnecessary computation.
 
-5. **Support for Multi-Class Classification**:
-   - Modify the output layer and implement **softmax activation** for tasks requiring multi-class predictions.
+5. ~~**Support for Multi-Class Classification**:~~
+   - ~~Modify the output layer and implement softmax activation for tasks requiring multi-class predictions.~~
 
 6. **Model Checkpointing**:
    - Save the model’s weights at optimal points during training to prevent loss of progress, especially for long training times.

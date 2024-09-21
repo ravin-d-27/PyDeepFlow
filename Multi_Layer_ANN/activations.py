@@ -25,8 +25,6 @@ def activation_derivative(x, func):
     elif func == 'tanh':
         return 1 - np.tanh(x) ** 2
     elif func == 'softmax':
-        # Softmax derivative is more complex and usually handled in combination with cross-entropy loss.
-        # If needed, this can be customized for specific cases.
         return x * (1 - x)
     else:
         raise ValueError(f"Unsupported activation derivative: {func}")
