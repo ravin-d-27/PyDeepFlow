@@ -1,7 +1,7 @@
 
 ---
 
-# Documentation for Custom Multi-Layer ANN
+# PyDeepFlow
 
 ### Author & Creator: **ravin-d-27**
 
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This documentation covers the development, structure, and features of a custom-built Multi-Layer Artificial Neural Network (ANN) created for binary classification tasks. The model is implemented from scratch using Python and NumPy and offers flexibility in terms of architecture, activation functions, and training methods. Future enhancement plans are also outlined, showcasing how the model can evolve to meet more complex and diverse requirements.
+This documentation covers the development, structure, and features of PyDeepFlow created for Deep Learning workflows (Right Now, there is only support for Multi-Class Classification). The model is implemented from scratch using Python and NumPy and offers flexibility in terms of architecture, activation functions, and training methods. Future enhancement plans are also outlined, showcasing how the model can evolve to meet more complex and diverse requirements.
 
 ---
 

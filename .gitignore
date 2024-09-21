@@ -55,6 +55,10 @@ cover/
 *.mo
 *.pot
 
+
+# Pickle Stuff:
+*.pkl
+
 # Django stuff:
 *.log
 local_settings.py

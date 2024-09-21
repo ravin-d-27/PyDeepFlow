@@ -6,6 +6,9 @@ from tqdm import tqdm
 import time
 from colorama import Fore, Style
 
+import json
+import pickle
+
 # Dear users, please read the comments for better understanding of the code.  If you find any optimizations in my implementation, please don't hesitate to make a pull request and fix it
 class Multi_Layer_ANN:
     
@@ -119,3 +122,28 @@ class Multi_Layer_ANN:
         else:
             raise ValueError(f"Unsupported output activation function: {self.output_activation}")
 
+
+    def save_model(self, filename):
+        model_data = {
+            'layers': self.layers, 'activations': self.activations,
+            'weights': self.weights, 'biases': self.biases,
+            'loss': self.loss, 'output_activation': self.output_activation
+        }
+        
+        with open(filename, 'wb') as f:
+            pickle.dump(model_data, f)
+
+    def load_model(self, filename):
+        with open(filename, 'rb') as f:
+            model_data = pickle.load(f)
+
+        self.layers = model_data['layers']
+        self.activations = model_data['activations']
+        self.weights = model_data['weights']
+        self.biases = model_data['biases']
+        self.loss = model_data['loss']
+        self.output_activation = model_data['output_activation']
+
+        # Reinitialize other necessary attributes if needed
+        self.loss_func = get_loss_function(self.loss)
+        self.loss_derivative = get_loss_derivative(self.loss)
