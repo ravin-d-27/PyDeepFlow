@@ -1,4 +1,3 @@
-Here's a more detailed version of the documentation, including explicit explanations, future enhancement integration plans, and a mention of the author as **ravin-d-27**:
 
 ---
 
