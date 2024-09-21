@@ -2,6 +2,10 @@ import numpy as np
 from activations import activation, activation_derivative
 from losses import get_loss_function, get_loss_derivative
 
+from tqdm import tqdm
+import time
+from colorama import Fore, Style
+
 class Multi_Layer_ANN:
     
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='binary_crossentropy'):
@@ -56,14 +60,35 @@ class Multi_Layer_ANN:
             self.biases[i] += np.sum(deltas[i], axis=0, keepdims=True) * learning_rate
             
     def fit(self, X_train, y_train, epochs, learning_rate):
-        for epoch in range(epochs):
+        prev_loss = float('inf')  
+
+        for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
+            start_time = time.time()  
+
+            
             activations, Z_values = self.forward_propagation(X_train)
             self.backpropagation(X_train, y_train, activations, Z_values, learning_rate)
 
+            
             loss = self.loss_func(y_train, activations[-1])
+            accuracy = np.mean((activations[-1] >= 0.5).astype(int) == y_train)
+            loss_change = prev_loss - loss if prev_loss != float('inf') else 0
+            prev_loss = loss  # Update previous loss
 
+            # Time taken for this epoch
+            epoch_time = time.time() - start_time
+
+            # Print every 10th epoch with colors and formatted output
             if epoch % 10 == 0:
-                print(f"Epoch {epoch}, Loss: {loss:.4f}")
+                print(f"Loss: {Fore.RED}{loss:.4f}{Style.RESET_ALL} | "
+                    f"Accuracy: {Fore.GREEN}{accuracy * 100:.2f}%{Style.RESET_ALL} | "
+                    f"Time: {epoch_time:.2f}s")
+                
+        print()
+        print()
+        print("Training is Completed Successfully !")
+        print()
+        print()
 
     def predict(self, X):
         activations, _ = self.forward_propagation(X)
