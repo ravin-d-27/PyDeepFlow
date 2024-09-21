@@ -24,7 +24,7 @@ if __name__ == "__main__":
     ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='binary_crossentropy')
     
     
-    ann.fit(X_train, y_train, epochs=1000, learning_rate=0.05)
+    ann.fit(epochs=1000, learning_rate=0.05)
     y_pred = ann.predict(X_test)
     print(f"Predictions: {y_pred}")
     

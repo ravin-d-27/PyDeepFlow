@@ -18,6 +18,9 @@ class Multi_Layer_ANN:
         self.loss_func = get_loss_function(self.loss)
         self.loss_derivative = get_loss_derivative(self.loss)
         
+        self.X_train = X_train
+        self.y_train = Y_train
+        
         np.random.seed(42)  # For reproducibility
         
         for i in range(len(self.layers) - 1):
@@ -59,19 +62,19 @@ class Multi_Layer_ANN:
             self.weights[i] += activations[i].T.dot(deltas[i]) * learning_rate
             self.biases[i] += np.sum(deltas[i], axis=0, keepdims=True) * learning_rate
             
-    def fit(self, X_train, y_train, epochs, learning_rate):
+    def fit(self, epochs, learning_rate):
         prev_loss = float('inf')  
-
+        
         for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
             start_time = time.time()  
 
             
-            activations, Z_values = self.forward_propagation(X_train)
-            self.backpropagation(X_train, y_train, activations, Z_values, learning_rate)
+            activations, Z_values = self.forward_propagation(self.X_train)
+            self.backpropagation(self.X_train, self.y_train, activations, Z_values, learning_rate)
 
             
-            loss = self.loss_func(y_train, activations[-1])
-            accuracy = np.mean((activations[-1] >= 0.5).astype(int) == y_train)
+            loss = self.loss_func(self.y_train, activations[-1])
+            accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train)
             loss_change = prev_loss - loss if prev_loss != float('inf') else 0
             prev_loss = loss  # Update previous loss
 
@@ -80,6 +83,7 @@ class Multi_Layer_ANN:
 
             # Print every 10th epoch with colors and formatted output
             if epoch % 10 == 0:
+                
                 print(f"Loss: {Fore.RED}{loss:.4f}{Style.RESET_ALL} | "
                     f"Accuracy: {Fore.GREEN}{accuracy * 100:.2f}%{Style.RESET_ALL} | "
                     f"Time: {epoch_time:.2f}s")
