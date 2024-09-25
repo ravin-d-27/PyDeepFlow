@@ -201,29 +201,37 @@ To further extend the model’s functionality, the following enhancements will b
 ## 7. Example Code
 
 ```python
-# Load and preprocess the dataset
-df = pd.read_csv("Dataset/Naive-Bayes-Classification-Data.csv")
-X = df.iloc[:, :-1]
-y = df.iloc[:, -1]
+   X = df.iloc[:, :-1].values
+   y = df.iloc[:, -1].values
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+   y_one_hot = np.eye(len(np.unique(y)))[y]
 
-# Initialize and train the model
-hidden_layers = [5, 5]
-activations = ['relu', 'relu']
-ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations)
-ann.fit(epochs=1000, learning_rate=0.05)
+   X_train, X_test, y_train, y_test = train_test_split(X, y_one_hot, test_size=0.2, random_state=42)
 
-# Predict on the test set
-y_pred = ann.predict(X_test)
-print(f"Predictions: {y_pred}")
+   scaler = StandardScaler()
+   X_train = scaler.fit_transform(X_train)
+   X_test = scaler.transform(X_test)
 
-# Calculate accuracy
-accuracy = np.mean(y_pred == y_test)
-print(f"Test Accuracy: {accuracy * 100:.2f}%")
+
+    # Define the architecture
+   hidden_layers = [5, 5]
+   activations = ['relu', 'relu']
+
+   ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy')
+   ann.fit(epochs=1000, learning_rate=0.01)
+
+    # Make predictions
+   y_pred = ann.predict(X_test)
+
+   print(y_pred)
+
+    # Convert predictions back to original labels
+   y_test_labels = np.argmax(y_test, axis=1)
+
+    # Calculate accuracy
+   accuracy = np.mean(y_pred == y_test_labels)
+   print(f"Test Accuracy: {accuracy * 100:.2f}%")
+
 ```
 
 ---
