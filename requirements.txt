@@ -4,3 +4,5 @@ scikit-learn==1.2.0
 jupyter==1.0.0
 tqdm==4.64.1
 colorama==0.4.6
+cupy
+
