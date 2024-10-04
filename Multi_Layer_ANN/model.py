@@ -96,3 +96,7 @@ class Multi_Layer_ANN:
             return self.device.asnumpy((activations[-1] >= 0.5).astype(int)).flatten()
         elif self.output_activation == 'softmax':
             return self.device.asnumpy(np.argmax(activations[-1], axis=1))
+        
+    def predict_prob(self, X):
+        activations, _ = self.forward_propagation(self.device.array(X))
+        return self.device.asnumpy(activations[-1])
