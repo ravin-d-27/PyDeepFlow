@@ -3,13 +3,15 @@ import numpy as np
 from .activations import activation, activation_derivative  # Relative import
 from .losses import get_loss_function, get_loss_derivative   # Relative import
 from .device import Device                                  # Relative import
+from regularization import Regularization
 from tqdm import tqdm
 import time
 
 
 class Multi_Layer_ANN:
-    def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=False):
+    def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=False, l2_lambda=0.0, dropout_rate=0.0):
         self.device = Device(use_gpu=use_gpu)
+        self.regularization = Regularization(l2_lambda, dropout_rate)
 
         if Y_train.ndim == 1 or Y_train.shape[1] == 1:  # Binary classification
             self.layers = [X_train.shape[1]] + hidden_layers + [1]
@@ -45,6 +47,7 @@ class Multi_Layer_ANN:
             Z = self.device.dot(activations[-1], self.weights[i]) + self.biases[i]
             Z_values.append(Z)
             A = activation(Z, self.activations[i], self.device)
+            A = self.regularization.apply_dropout(A, training=self.training)  # Apply dropout during training
             activations.append(A)
 
         Z_output = self.device.dot(activations[-1], self.weights[-1]) + self.biases[-1]
@@ -70,7 +73,11 @@ class Multi_Layer_ANN:
             self.weights[i] += self.device.dot(activations[i].T, deltas[i]) * learning_rate
             self.biases[i] += self.device.sum(deltas[i], axis=0, keepdims=True) * learning_rate
 
+        # Apply L2 regularization to weights
+        self.weights = self.regularization.apply_l2_regularization(self.weights, learning_rate, X.shape)
+
     def fit(self, epochs, learning_rate):
+        self.training = True # Set training mode to True 
         prev_loss = float('inf')
         
         for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
@@ -80,7 +87,8 @@ class Multi_Layer_ANN:
             self.backpropagation(self.X_train, self.y_train, activations, Z_values, learning_rate)
 
             loss = self.loss_func(self.y_train, activations[-1], self.device)
-            accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation == 'sigmoid' else np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
+            accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation \
+                == 'sigmoid' else np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
 
             loss_change = prev_loss - loss if prev_loss != float('inf') else 0
             prev_loss = loss
@@ -90,6 +98,7 @@ class Multi_Layer_ANN:
                 print(f"Loss: {loss:.4f} | Accuracy: {accuracy * 100:.2f}% | Time: {epoch_time:.2f}s")
 
         print("Training Completed!")
+        self.training = False # Set training mode to False after training
 
     def predict(self, X):
         activations, _ = self.forward_propagation(self.device.array(X))
