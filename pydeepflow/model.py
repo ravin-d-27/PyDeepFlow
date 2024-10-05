@@ -1,10 +1,11 @@
 # model.py
 import numpy as np
-from activations import activation, activation_derivative
-from losses import get_loss_function, get_loss_derivative
-from device import Device
+from .activations import activation, activation_derivative  # Relative import
+from .losses import get_loss_function, get_loss_derivative   # Relative import
+from .device import Device                                  # Relative import
 from tqdm import tqdm
 import time
+
 
 class Multi_Layer_ANN:
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=False):
