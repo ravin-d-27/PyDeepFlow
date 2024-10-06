@@ -1,5 +1,5 @@
 import numpy as np 
-from device import Device
+from .device import Device
 
 class Regularization:
     def __init__(self, l2_lambda=0.0, dropout_rate=0.0):
@@ -9,7 +9,7 @@ class Regularization:
 
     def apply_l2_regularization(self, weights, learning_rate, X_shape):
         for i in range(len(weights)):
-            weights[i] -= (self.l2_lambda * weights[i]) / X_shape
+            weights[i] -= (self.l2_lambda * weights[i]) / X_shape[0]
         return weights
 
     def apply_dropout(self, A, training=True):

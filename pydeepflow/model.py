@@ -3,7 +3,7 @@ import numpy as np
 from .activations import activation, activation_derivative  # Relative import
 from .losses import get_loss_function, get_loss_derivative   # Relative import
 from .device import Device                                  # Relative import
-from regularization import Regularization
+from .regularization import Regularization
 from tqdm import tqdm
 import time
 
