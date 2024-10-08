@@ -4,6 +4,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
 
+# Learning Rate Scheduler:
+from pydeepflow.learning_rate_scheduler import LearningRateScheduler
+
 if __name__ == "__main__":
     
     # Load Iris dataset
@@ -41,8 +44,11 @@ if __name__ == "__main__":
     # Initialize the ANN with use_gpu option
     ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
 
+    # Updated Now:
+    lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
+    
     # Train the model
-    ann.fit(epochs=1000, learning_rate=0.01)
+    ann.fit(epochs=1000, learning_rate=0.01, lr_scheduler=lr_scheduler)
 
     # Make predictions on the test set
     y_pred = ann.predict(X_test)
