@@ -1,0 +1,3 @@
+include LICENSE
+include README.mdpip
+recursive-include licenses *
