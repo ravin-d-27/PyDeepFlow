@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="pydeepflow",
-    version="0.1.6",  # Updated version
+    version="0.1.7",  # Updated version
     author="Ravin D",
     author_email="ravin.d3107@outlook.com",
     description="A deep learning package optimized for performing Deep Learning Tasks, easy to learn and integrate into projects",
@@ -32,5 +32,6 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/ravin-d-27/PyDeepFlow/issues",
         "Source Code": "https://github.com/ravin-d-27/PyDeepFlow",
+        "Documentation:":"https://github.com/ravin-d-27/PyDeepFlow/wiki"
     },
 )
