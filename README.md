@@ -3,6 +3,10 @@
 
 # **PyDeepFlow**
 
+<p align="center">
+  <img src="assets/Logo.webp" alt="PyDeepFlow Logo" width="300px">
+</p>
+
 ## **Author**
 
 **Author Name**: Ravin D  
@@ -10,6 +14,15 @@
 **Email**: ravin.d3107@outlook.com
 <br><br>
 The author is passionate about deep learning and is dedicated to creating tools that make neural networks more accessible to everyone.
+
+## Contributors
+
+Thanks to these amazing people for contributing to this project:
+
+<a href="https://github.com/ravin-d-27/PyDeepFlow/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ravin-d-27/PyDeepFlow" />
+</a>
+
 
 ## **What is Pydeepflow?**
 

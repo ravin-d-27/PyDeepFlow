@@ -82,6 +82,9 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Checkpoint files (Added by ravin-d-27 for testing purposes)
+checkpoints
+
 # IPython
 profile_default/
 ipython_config.py
