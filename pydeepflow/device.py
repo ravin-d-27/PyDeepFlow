@@ -31,6 +31,23 @@ class Device:
         if use_gpu and cp is None:
             raise ValueError("CuPy is not installed, please install CuPy for GPU support.")
 
+    def abs(self, x):
+        """
+        Computes the absolute value of each element in the input array.
+
+        Parameters:
+        -----------
+        x : np.ndarray or cp.ndarray
+            The input array.
+
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            The absolute value of each element in `x`.
+        """
+        return cp.abs(x) if self.use_gpu else np.abs(x)
+
+
     def array(self, data):
         """
         Converts input data into a NumPy or CuPy array.
