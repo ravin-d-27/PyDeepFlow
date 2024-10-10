@@ -78,11 +78,11 @@ class Multi_Layer_ANN:
         """
         Performs forward propagation through the network.
         Parameters:
-        X (np.ndarray): Input data.
-        Returns:
-        tuple: A tuple containing:
-        - activations (list): List of activations for each layer.
-        - Z_values (list): List of Z (pre-activation) values for each layer.
+            X (np.ndarray): Input data.
+            Returns:
+            tuple: A tuple containing:
+            - activations (list): List of activations for each layer.
+            - Z_values (list): List of Z (pre-activation) values for each layer.
         """
         activations = [X]
         Z_values = []
@@ -107,11 +107,11 @@ class Multi_Layer_ANN:
         """
         Performs backpropagation through the network to compute weight updates.
         Parameters:
-        X (np.ndarray): Input data.
-        y (np.ndarray): True labels.
-        activations (list): List of activations from forward propagation.
-        Z_values (list): List of Z (pre-activation) values from forward propagation.
-        learning_rate (float): The learning rate for gradient updates.
+            X (np.ndarray): Input data.
+            y (np.ndarray): True labels.
+            activations (list): List of activations from forward propagation.
+            Z_values (list): List of Z (pre-activation) values from forward propagation.
+            learning_rate (float): The learning rate for gradient updates.
         """
         # Calculate the error in the output layer
         output_error = y - activations[-1]
@@ -137,10 +137,13 @@ class Multi_Layer_ANN:
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
         Parameters:
-        epochs (int): Number of training epochs.
-        learning_rate (float): Initial learning rate.
-        lr_scheduler (LearningRateScheduler optional): An instance of LearningRateScheduler for
-        dynamic learning rate adjustment.
+            epochs (int): Number of training epochs.
+            learning_rate (float): Initial learning rate.
+            lr_scheduler (LearningRateScheduler optional): An instance of LearningRateScheduler for
+            dynamic learning rate adjustment.
+            
+        Returns:
+            None
         """
         prev_loss = float('inf')
         
@@ -180,9 +183,9 @@ class Multi_Layer_ANN:
         """
         Makes predictions based on input data using the trained model.
         Parameters:
-        X (np.ndarray): Input data.
+            X (np.ndarray): Input data.
         Returns:
-        np.ndarray: The predicted class labels for the input data.
+            np.ndarray: The predicted class labels for the input data.
         """
         activations, _ = self.forward_propagation(self.device.array(X))
         if self.output_activation == 'sigmoid':
@@ -194,9 +197,9 @@ class Multi_Layer_ANN:
         """
         Predicts the probability distribution for the input data.
         Parameters:
-        X (np.ndarray): Input data.
+            X (np.ndarray): Input data.
         Returns:
-        np.ndarray: The predicted probabilities for the input data.
+            np.ndarray: The predicted probabilities for the input data.
         """
         activations, _ = self.forward_propagation(self.device.array(X))
         return self.device.asnumpy(activations[-1])
