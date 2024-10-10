@@ -32,6 +32,6 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/ravin-d-27/PyDeepFlow/issues",
         "Source Code": "https://github.com/ravin-d-27/PyDeepFlow",
-        "Documentation:":"https://github.com/ravin-d-27/PyDeepFlow/wiki"
+        "Documentation":"https://github.com/ravin-d-27/PyDeepFlow/wiki"
     },
 )

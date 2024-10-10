@@ -4,6 +4,7 @@ from .activations import activation, activation_derivative
 from .losses import get_loss_function, get_loss_derivative  
 from .device import Device                                  
 from .regularization import Regularization
+from .checkpoints import ModelCheckpoint
 from tqdm import tqdm
 import time
 
@@ -133,7 +134,7 @@ class Multi_Layer_ANN:
         # Apply L2 regularization to the weights
         self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
-    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None):
+    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, X_val=None, y_val=None, checkpoint=None):   
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
         Parameters:
@@ -141,12 +142,13 @@ class Multi_Layer_ANN:
             learning_rate (float): Initial learning rate.
             lr_scheduler (LearningRateScheduler optional): An instance of LearningRateScheduler for
             dynamic learning rate adjustment.
-            
+            X_val (array): Validation data for checking performance during training.
+            y_val (array): Validation labels.
+            checkpoint (str, optional): Path to save the model checkpoint after each epoch.
         Returns:
             None
         """
-        prev_loss = float('inf')
-        
+
         for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
             start_time = time.time()
 
@@ -155,28 +157,51 @@ class Multi_Layer_ANN:
                 current_lr = lr_scheduler.get_lr(epoch)
             else:
                 current_lr = learning_rate
+            
             # Forward and Backpropagation
             self.training = True
             activations, Z_values = self.forward_propagation(self.X_train)
             self.backpropagation(self.X_train, self.y_train, activations, Z_values, current_lr)
 
             self.training = False
-            # Compute loss and accuracy
-            loss = self.loss_func(self.y_train, activations[-1], self.device)
-            accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation \
-            == 'sigmoid' else \
-            np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
 
-            # Log the loss change and update previous loss
-            loss_change = prev_loss - loss if prev_loss != float('inf') else 0
-            prev_loss = loss
+            # Compute training loss and accuracy
+            train_loss = self.loss_func(self.y_train, activations[-1], self.device)
+            train_accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation == 'sigmoid' else np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
+
+            # Validation step
+            if X_val is not None and y_val is not None:
+                val_activations, _ = self.forward_propagation(self.device.array(X_val))
+                val_loss = self.loss_func(self.device.array(y_val), val_activations[-1], self.device)
+                val_accuracy = np.mean((val_activations[-1] >= 0.5).astype(int) == y_val) if self.output_activation == 'sigmoid' else np.mean(np.argmax(val_activations[-1], axis=1) == np.argmax(y_val, axis=1))
+
+            # Checkpoint saving logic
+            if checkpoint is not None and X_val is not None:
+                if checkpoint.should_save(epoch, val_loss):
+                    checkpoint.save_weights(epoch, self.weights, self.biases, val_loss)
 
             # Log training progress
             epoch_time = time.time() - start_time
             if epoch % 10 == 0:
-                print(f"Epoch {epoch + 1}/{epochs} Loss: {loss:.4f} Accuracy: {accuracy * 100:.2f}% Time: \
-                {epoch_time:.2f}s Learning Rate: {current_lr:.6f}")
+                print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
+                      f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
+                      f"Learning Rate: {current_lr:.6f}")
+                
         print("Training Completed!")
+        
+        
+    def load_weights(self, checkpoint_path):
+        """
+        Loads model weights from a checkpoint.
+
+        Args:
+            checkpoint_path (str): The path to the checkpoint file from which to load the weights.
+
+        Returns:
+            None
+        """
+        checkpoint = ModelCheckpoint(save_dir="")
+        checkpoint.load_weights(self, checkpoint_path)
 
 
     def predict(self, X):
