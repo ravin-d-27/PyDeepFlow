@@ -4,7 +4,7 @@
 # **PyDeepFlow**
 
 <p align="center">
-  <img src="assets/Logo2.webp" alt="PyDeepFlow Logo" width="300px">
+  <img src="assets/Logo.webp" alt="PyDeepFlow Logo" width="300px">
 </p>
 
 ## **Author**
