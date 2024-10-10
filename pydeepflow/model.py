@@ -12,16 +12,16 @@ class Multi_Layer_ANN:
     """
     A Multi-Layer Artificial Neural Network (ANN) class for binary and multi-class classification tasks.
     Attributes:
-    device: The device (CPU/GPU) where the computations will be performed.
-    layers: List of the number of neurons in each layer of the network.
-    activations: List of activation functions for each hidden layer.
-    weights: List of weight matrices for each layer.
-    biases: List of bias vectors for each layer.
-    loss: The type of loss function being used.
-    loss_func: The callable loss function used during training.
-    loss_derivative: The callable derivative of the loss function for backpropagation.
-    X_train: Training feature set moved to the specified device.
-    y_train: Training label set moved to the specified device.
+        device: The device (CPU/GPU) where the computations will be performed.
+        layers: List of the number of neurons in each layer of the network.
+        activations: List of activation functions for each hidden layer.
+        weights: List of weight matrices for each layer.
+        biases: List of bias vectors for each layer.
+        loss: The type of loss function being used.
+        loss_func: The callable loss function used during training.
+        loss_derivative: The callable derivative of the loss function for backpropagation.
+        X_train: Training feature set moved to the specified device.
+        y_train: Training label set moved to the specified device.
     """
 
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
@@ -29,15 +29,15 @@ class Multi_Layer_ANN:
         """
         Initializes the ANN model with the provided architecture and configurations.
         Parameters:
-        X_train (np.ndarray): The training feature set.
-        Y_train (np.ndarray): The training label set (one-hot encoded for multi-class).
-        hidden_layers (list): A list specifying the number of neurons in each hidden layer.
-        activations (list): A list specifying the activation function for each hidden layer.
-        loss (str): The type of loss function to use ('categorical_crossentropy' or
-        'binary_crossentropy').
-        use_gpu (bool): Whether to use GPU for computations. Defaults to False.
-        l2_lambda (float): The regularization coefficient for L2 regularization.
-        dropout_rate (float): Dropout rate to prevent overfitting.
+            X_train (np.ndarray): The training feature set.
+            Y_train (np.ndarray): The training label set (one-hot encoded for multi-class).
+            hidden_layers (list): A list specifying the number of neurons in each hidden layer.
+            activations (list): A list specifying the activation function for each hidden layer.
+            loss (str): The type of loss function to use ('categorical_crossentropy' or
+            'binary_crossentropy').
+            use_gpu (bool): Whether to use GPU for computations. Defaults to False.
+            l2_lambda (float): The regularization coefficient for L2 regularization.
+            dropout_rate (float): Dropout rate to prevent overfitting.
         """
         
         self.device = Device(use_gpu=use_gpu)
