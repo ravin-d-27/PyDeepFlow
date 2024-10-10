@@ -200,8 +200,15 @@ class Multi_Layer_ANN:
         Returns:
             None
         """
-        checkpoint = ModelCheckpoint(save_dir="")
-        checkpoint.load_weights(self, checkpoint_path)
+        
+        data = np.load(checkpoint_path)
+        for i in range(len(self.weights)):
+            try:
+                self.weights[i] = data[f'weights_layer_{i}']  # Updated key name
+                self.biases[i] = data[f'biases_layer_{i}']    # Updated key name
+            except KeyError as e:
+                print(f"Key error: {e}. Please check the checkpoint file.")
+
 
 
     def predict(self, X):

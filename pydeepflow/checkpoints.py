@@ -15,22 +15,35 @@ class ModelCheckpoint:
         self.save_best_only = save_best_only
         self.save_freq = save_freq
         self.best_metric = np.inf if "loss" in monitor else -np.inf
-        os.makedirs(save_dir, exist_ok=True)
+        self.best_val_loss = float('inf')  # Initial best validation loss
 
-    def save_weights(self, epoch, weights, biases, metric):
+    def save_weights(self, epoch, weights, biases, val_loss):
         
         """ Saves weights and biases to the specified directory.
         Args:
             epoch (int): The current epoch number.
             weights (numpy.ndarray): The weights of the model to be saved.
             biases (numpy.ndarray): The biases of the model to be saved.
-            metric (float): The performance metric value to be logged.
+            val_loss (float): The validation loss value to be logged.
         Returns:
             None
         """
-        checkpoint_path = os.path.join(self.save_dir, f"checkpoint_epoch_{epoch}.npz")
-        np.savez(checkpoint_path, weights=weights, biases=biases)
-        print(f"Saved checkpoint at epoch {epoch} with {self.monitor}: {metric:.4f}")
+        
+        # Create the directory if it does not exist
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)  # Create the directory
+
+        checkpoint_path = f"{self.save_dir}/checkpoint_epoch_{epoch}.npz"
+        
+        # Prepare data to save
+        data = {}
+        for i, (w, b) in enumerate(zip(weights, biases)):
+            data[f'weights_layer_{i}'] = w  # Correctly saving with this key
+            data[f'biases_layer_{i}'] = b    # Correctly saving with this key
+        
+        # Save as .npz file
+        np.savez(checkpoint_path, **data)
+
 
     def should_save(self, epoch, metric):
         """
@@ -53,19 +66,4 @@ class ModelCheckpoint:
                 return True
         return False
 
-    def load_weights(self, model, checkpoint_path):
-        """
-        Loads weights and biases from a checkpoint file.
-
-        Parameters:
-        model (object): The model object to which the weights and biases will be loaded.
-        checkpoint_path (str): The file path to the checkpoint file containing the weights and biases.
-
-        Returns:
-            None
-        """
-        
-        data = np.load(checkpoint_path)
-        model.weights = data['weights']
-        model.biases = data['biases']
-        print(f"Loaded weights from {checkpoint_path}")
+    
