@@ -1,5 +1,5 @@
-# model.py
 import numpy as np
+import matplotlib.pyplot as plt  
 from .activations import activation, activation_derivative  
 from .losses import get_loss_function, get_loss_derivative  
 from .device import Device                                  
@@ -8,47 +8,23 @@ from .checkpoints import ModelCheckpoint
 from tqdm import tqdm
 import time
 
-
 class Multi_Layer_ANN:
     """
     A Multi-Layer Artificial Neural Network (ANN) class for binary and multi-class classification tasks.
-    Attributes:
-        device: The device (CPU/GPU) where the computations will be performed.
-        layers: List of the number of neurons in each layer of the network.
-        activations: List of activation functions for each hidden layer.
-        weights: List of weight matrices for each layer.
-        biases: List of bias vectors for each layer.
-        loss: The type of loss function being used.
-        loss_func: The callable loss function used during training.
-        loss_derivative: The callable derivative of the loss function for backpropagation.
-        X_train: Training feature set moved to the specified device.
-        y_train: Training label set moved to the specified device.
     """
-
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
                  use_gpu=False, l2_lambda=0.0, dropout_rate=0.0):
         """
         Initializes the ANN model with the provided architecture and configurations.
-        Parameters:
-            X_train (np.ndarray): The training feature set.
-            Y_train (np.ndarray): The training label set (one-hot encoded for multi-class).
-            hidden_layers (list): A list specifying the number of neurons in each hidden layer.
-            activations (list): A list specifying the activation function for each hidden layer.
-            loss (str): The type of loss function to use ('categorical_crossentropy' or
-            'binary_crossentropy').
-            use_gpu (bool): Whether to use GPU for computations. Defaults to False.
-            l2_lambda (float): The regularization coefficient for L2 regularization.
-            dropout_rate (float): Dropout rate to prevent overfitting.
         """
-        
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
 
         # Determine the network architecture based on the classification task (binary or multi-class)
-        if Y_train.ndim == 1 or Y_train.shape[1] == 1:  # Binary classification
+        if Y_train.ndim == 1 or Y_train.shape[1] == 1:
             self.layers = [X_train.shape[1]] + hidden_layers + [1]
             self.output_activation = 'sigmoid'
-        else:  # Multi-class classification
+        else: 
             self.layers = [X_train.shape[1]] + hidden_layers + [Y_train.shape[1]]
             self.output_activation = 'softmax'
 
@@ -71,19 +47,17 @@ class Multi_Layer_ANN:
             bias_vector = self.device.zeros((1, self.layers[i + 1]))
             self.weights.append(weight_matrix)
             self.biases.append(bias_vector)
-        
+
         # Initialize training attribute
         self.training = False
+
+        # Store metrics for plotting
+        self.history = {'train_loss': [], 'val_loss': [], 'train_accuracy': [], 'val_accuracy': []}
+
 
     def forward_propagation(self, X):
         """
         Performs forward propagation through the network.
-        Parameters:
-            X (np.ndarray): Input data.
-            Returns:
-            tuple: A tuple containing:
-            - activations (list): List of activations for each layer.
-            - Z_values (list): List of Z (pre-activation) values for each layer.
         """
         activations = [X]
         Z_values = []
@@ -93,7 +67,7 @@ class Multi_Layer_ANN:
             Z = self.device.dot(activations[-1], self.weights[i]) + self.biases[i]
             Z_values.append(Z)
             A = activation(Z, self.activations[i], self.device)
-            A = self.regularization.apply_dropout(A, training=self.training)  # Apply dropout during training
+            A = self.regularization.apply_dropout(A, training=self.training) 
             activations.append(A)
 
         # Forward pass through the output layer
@@ -107,12 +81,6 @@ class Multi_Layer_ANN:
     def backpropagation(self, X, y, activations, Z_values, learning_rate):
         """
         Performs backpropagation through the network to compute weight updates.
-        Parameters:
-            X (np.ndarray): Input data.
-            y (np.ndarray): True labels.
-            activations (list): List of activations from forward propagation.
-            Z_values (list): List of Z (pre-activation) values from forward propagation.
-            learning_rate (float): The learning rate for gradient updates.
         """
         # Calculate the error in the output layer
         output_error = y - activations[-1]
@@ -137,16 +105,6 @@ class Multi_Layer_ANN:
     def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, X_val=None, y_val=None, checkpoint=None):   
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
-        Parameters:
-            epochs (int): Number of training epochs.
-            learning_rate (float): Initial learning rate.
-            lr_scheduler (LearningRateScheduler optional): An instance of LearningRateScheduler for
-            dynamic learning rate adjustment.
-            X_val (array): Validation data for checking performance during training.
-            y_val (array): Validation labels.
-            checkpoint (str, optional): Path to save the model checkpoint after each epoch.
-        Returns:
-            None
         """
 
         for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
@@ -170,10 +128,18 @@ class Multi_Layer_ANN:
             train_accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation == 'sigmoid' else np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
 
             # Validation step
+            val_loss = val_accuracy = None
             if X_val is not None and y_val is not None:
                 val_activations, _ = self.forward_propagation(self.device.array(X_val))
                 val_loss = self.loss_func(self.device.array(y_val), val_activations[-1], self.device)
                 val_accuracy = np.mean((val_activations[-1] >= 0.5).astype(int) == y_val) if self.output_activation == 'sigmoid' else np.mean(np.argmax(val_activations[-1], axis=1) == np.argmax(y_val, axis=1))
+
+            # Store training history for plotting
+            self.history['train_loss'].append(train_loss)
+            self.history['train_accuracy'].append(train_accuracy)
+            if val_loss is not None:
+                self.history['val_loss'].append(val_loss)
+                self.history['val_accuracy'].append(val_accuracy)
 
             # Checkpoint saving logic
             if checkpoint is not None and X_val is not None:
@@ -193,31 +159,18 @@ class Multi_Layer_ANN:
     def load_weights(self, checkpoint_path):
         """
         Loads model weights from a checkpoint.
-
-        Args:
-            checkpoint_path (str): The path to the checkpoint file from which to load the weights.
-
-        Returns:
-            None
         """
-        
         data = np.load(checkpoint_path)
         for i in range(len(self.weights)):
             try:
-                self.weights[i] = data[f'weights_layer_{i}']  # Updated key name
-                self.biases[i] = data[f'biases_layer_{i}']    # Updated key name
+                self.weights[i] = data[f'weights_layer_{i}']
+                self.biases[i] = data[f'biases_layer_{i}']
             except KeyError as e:
                 print(f"Key error: {e}. Please check the checkpoint file.")
-
-
 
     def predict(self, X):
         """
         Makes predictions based on input data using the trained model.
-        Parameters:
-            X (np.ndarray): Input data.
-        Returns:
-            np.ndarray: The predicted class labels for the input data.
         """
         activations, _ = self.forward_propagation(self.device.array(X))
         if self.output_activation == 'sigmoid':
@@ -228,10 +181,43 @@ class Multi_Layer_ANN:
     def predict_prob(self, X):
         """
         Predicts the probability distribution for the input data.
-        Parameters:
-            X (np.ndarray): Input data.
-        Returns:
-            np.ndarray: The predicted probabilities for the input data.
         """
         activations, _ = self.forward_propagation(self.device.array(X))
         return self.device.asnumpy(activations[-1])
+
+
+class Plotting_Utils:
+    """
+    Utility class for plotting training and validation metrics.
+    """
+    def plot_training_history(self, history, metrics=('loss', 'accuracy'), figure='history.png'):
+        """
+        Plots the training and validation loss/accuracy over epochs.
+        Parameters:
+            history (dict): A dictionary containing training history with keys 'train_loss', 'val_loss', 
+                            'train_accuracy', and 'val_accuracy'.
+            metrics (tuple): The metrics to plot ('loss' or 'accuracy').
+        """
+        epochs = len(history['train_loss'])
+        fig, ax = plt.subplots(1, len(metrics), figsize=(12, 5))
+
+        if 'loss' in metrics:
+            ax[0].plot(range(epochs), history['train_loss'], label='Train Loss')
+            if 'val_loss' in history:
+                ax[0].plot(range(epochs), history['val_loss'], label='Validation Loss')
+            ax[0].set_title("Loss over Epochs")
+            ax[0].set_xlabel("Epochs")
+            ax[0].set_ylabel("Loss")
+            ax[0].legend()
+
+        if 'accuracy' in metrics:
+            ax[1].plot(range(epochs), history['train_accuracy'], label='Train Accuracy')
+            if 'val_accuracy' in history:
+                ax[1].plot(range(epochs), history['val_accuracy'], label='Validation Accuracy')
+            ax[1].set_title("Accuracy over Epochs")
+            ax[1].set_xlabel("Epochs")
+            ax[1].set_ylabel("Accuracy")
+            ax[1].legend()
+        plt.savefig(figure)
+        plt.tight_layout()
+        plt.show()

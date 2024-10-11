@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.learning_rate_scheduler import LearningRateScheduler
+from pydeepflow.model import Plotting_Utils  # Correct import
 
 if __name__ == "__main__":
 
@@ -21,7 +22,7 @@ if __name__ == "__main__":
     X = df.iloc[:, :-1].values
     y = df.iloc[:, -1].values
 
-    # Convert labels to one-hot encoding
+    # Convert labels to one-hot encoding (for multiclass classification)
     y_one_hot = np.eye(len(np.unique(y)))[y]
 
     # Split data into training and testing sets
@@ -37,10 +38,10 @@ if __name__ == "__main__":
     use_gpu = True if use_gpu_input == 'y' else False
 
     # Define the architecture of the network
-    hidden_layers = [5, 5]
-    activations = ['relu', 'relu']
+    hidden_layers = [5, 5]  
+    activations = ['softmax', 'softmax']  
 
-    # Initialize the ANN with use_gpu option
+    # Initialize the ANN with softmax output for multiclass classification
     ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
 
     # Set up model checkpointing
@@ -49,8 +50,12 @@ if __name__ == "__main__":
     # Learning Rate Scheduler
     lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
 
-    # Train the model
+    # Train the model and capture history
     ann.fit(epochs=1000, learning_rate=0.01, lr_scheduler=lr_scheduler, X_val=X_train, y_val=y_train, checkpoint=checkpoint)
+
+    # Use Plotting_Utils to plot accuracy and loss
+    plot_utils = Plotting_Utils()  
+    plot_utils.plot_training_history(ann.history)  
 
     # Make predictions on the test set
     y_pred = ann.predict(X_test)
@@ -58,15 +63,21 @@ if __name__ == "__main__":
     # Convert one-hot encoded test labels back to integers
     y_test_labels = np.argmax(y_test, axis=1)
 
+    # Check the shape of y_pred
+    if y_pred.ndim == 1:  
+        y_pred_labels = (y_pred >= 0.5).astype(int)  
+    elif y_pred.ndim == 2:  
+        y_pred_labels = np.argmax(y_pred, axis=1)  
+
     # Calculate the accuracy of the model
-    accuracy = np.mean(y_pred == y_test_labels)
+    accuracy = np.mean(y_pred_labels == y_test_labels)
     print(f"Test Accuracy: {accuracy * 100:.2f}%")
 
     # Load the best weights from the checkpoint file
-    best_checkpoint_file = './checkpoints/checkpoint_epoch_995.npz'  # Replace with the correct checkpoint file name
+    best_checkpoint_file = './checkpoints/checkpoint_epoch_995.npz'  
     
     data = np.load(best_checkpoint_file)
-    print(data.files)  # Print available keys in the checkpoint
+    print(data.files)  
 
     ann.load_weights(best_checkpoint_file)
 
@@ -74,6 +85,11 @@ if __name__ == "__main__":
     y_pred_loaded = ann.predict(X_test)
 
     # Calculate accuracy of predictions using loaded weights
-    accuracy_loaded = np.mean(y_pred_loaded == y_test_labels)
+    if y_pred_loaded.ndim == 1:  
+        y_pred_loaded_labels = (y_pred_loaded >= 0.5).astype(int)
+    elif y_pred_loaded.ndim == 2:  
+        y_pred_loaded_labels = np.argmax(y_pred_loaded, axis=1)
+
+    accuracy_loaded = np.mean(y_pred_loaded_labels == y_test_labels)
     
     print(f"Loaded Model Test Accuracy: {accuracy_loaded * 100:.2f}%")
