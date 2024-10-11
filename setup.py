@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="pydeepflow",
-    version="0.1.8",  # Updated version
+    version="0.1.9",  # Updated version
     author="Ravin D",
     author_email="ravin.d3107@outlook.com",
     description="A deep learning package optimized for performing Deep Learning Tasks, easy to learn and integrate into projects",
@@ -28,6 +28,7 @@ setup(
         "jupyter>=1.0.0",
         "tqdm>=4.64.1",
         "colorama>=0.4.6",
+        'matplotlib',
     ],
     extras_require={
         "gpu": ["cupy>=9.6.0"],  # Optional GPU support
