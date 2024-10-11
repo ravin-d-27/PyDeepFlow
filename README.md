@@ -1,4 +1,3 @@
-![image](https://github.com/user-attachments/assets/81f3e52a-ad5a-47b5-a7e1-bdc9ee2de508)
 ---
 
 # **PyDeepFlow**
