@@ -85,6 +85,9 @@ target/
 # Checkpoint files (Added by ravin-d-27 for testing purposes)
 checkpoints
 
+# Eliminate the visualization things
+history.png
+
 # IPython
 profile_default/
 ipython_config.py
