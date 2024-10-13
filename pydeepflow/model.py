@@ -202,22 +202,23 @@ class Plotting_Utils:
         fig, ax = plt.subplots(1, len(metrics), figsize=(12, 5))
 
         if 'loss' in metrics:
-            ax[0].plot(range(epochs), history['train_loss'], label='Train Loss')
+            ax[0].plot(range(1, epochs + 1), history['train_loss'], label='Train Loss', color='blue')
             if 'val_loss' in history:
-                ax[0].plot(range(epochs), history['val_loss'], label='Validation Loss')
-            ax[0].set_title("Loss over Epochs")
-            ax[0].set_xlabel("Epochs")
-            ax[0].set_ylabel("Loss")
+                ax[0].plot(range(1, epochs + 1), history['val_loss'], label='Val Loss', color='orange')
+            ax[0].set_xlabel('Epochs')
+            ax[0].set_ylabel('Loss')
+            ax[0].set_title('Training vs Validation Loss')
             ax[0].legend()
 
         if 'accuracy' in metrics:
-            ax[1].plot(range(epochs), history['train_accuracy'], label='Train Accuracy')
+            ax[1].plot(range(1, epochs + 1), history['train_accuracy'], label='Train Accuracy', color='green')
             if 'val_accuracy' in history:
-                ax[1].plot(range(epochs), history['val_accuracy'], label='Validation Accuracy')
-            ax[1].set_title("Accuracy over Epochs")
-            ax[1].set_xlabel("Epochs")
-            ax[1].set_ylabel("Accuracy")
+                ax[1].plot(range(1, epochs + 1), history['val_accuracy'], label='Val Accuracy', color='red')
+            ax[1].set_xlabel('Epochs')
+            ax[1].set_ylabel('Accuracy')
+            ax[1].set_title('Training vs Validation Accuracy')
             ax[1].legend()
-        plt.savefig(figure)
+
         plt.tight_layout()
+        plt.savefig(figure)
         plt.show()
