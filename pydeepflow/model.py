@@ -102,10 +102,12 @@ class Multi_Layer_ANN:
         # Apply L2 regularization to the weights
         self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
-    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, X_val=None, y_val=None, checkpoint=None):   
+    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop = None, X_val=None, y_val=None, checkpoint=None):   
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
         """
+        if early_stop:
+            assert X_val is not None and y_val is not None, "Validation set is required for early stopping"
 
         for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
             start_time = time.time()
@@ -152,6 +154,15 @@ class Multi_Layer_ANN:
                 print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
                       f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
                       f"Learning Rate: {current_lr:.6f}")
+                
+            # Early stopping 
+            early_stop(val_loss)
+            if early_stop.early_stop:
+                print('\n',"#"*150,'\n\n', "early stop at - "
+                      f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
+                      f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
+                      f"Learning Rate: {current_lr:.6f}",'\n\n', "#"*150)
+                break
                 
         print("Training Completed!")
         
