@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # Define the architecture of the network
     hidden_layers = [5, 5]  
-    activations = ['softmax', 'softmax']  
+    activations = ['relu', 'relu']  
 
     # Initialize the ANN with softmax output for multiclass classification
     ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
@@ -63,11 +63,11 @@ if __name__ == "__main__":
     # Convert one-hot encoded test labels back to integers
     y_test_labels = np.argmax(y_test, axis=1)
 
-    # Check the shape of y_pred
+    # Adjust prediction shape handling for accuracy calculation
     if y_pred.ndim == 1:  
-        y_pred_labels = (y_pred >= 0.5).astype(int)  
+        y_pred_labels = (y_pred >= 0.5).astype(int)  # Binary classification (if applicable)
     elif y_pred.ndim == 2:  
-        y_pred_labels = np.argmax(y_pred, axis=1)  
+        y_pred_labels = np.argmax(y_pred, axis=1)  # Multi-class classification
 
     # Calculate the accuracy of the model
     accuracy = np.mean(y_pred_labels == y_test_labels)
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # Make predictions using the loaded weights
     y_pred_loaded = ann.predict(X_test)
 
-    # Calculate accuracy of predictions using loaded weights
+    # Adjust prediction shape handling for loaded model accuracy
     if y_pred_loaded.ndim == 1:  
         y_pred_loaded_labels = (y_pred_loaded >= 0.5).astype(int)
     elif y_pred_loaded.ndim == 2:  
