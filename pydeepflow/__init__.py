@@ -6,7 +6,8 @@ from .model import Multi_Layer_ANN, Plotting_Utils
 from .learning_rate_scheduler import LearningRateScheduler
 from .checkpoints import ModelCheckpoint
 from .regularization import Regularization
+from .early_stopping import EarlyStopping
 
 _all_ = ["activation", "activation_derivative", "get_loss_function", "get_loss_derivative", "Device",
          "Multi_Layer_ANN", "Plotting_Utils", "LearningRateScheduler", "ModelCheckpoint", "Regularization",
-         "Plotting_Utils"]
+         "Plotting_Utils", "EarlyStopping"]

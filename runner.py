@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
+from pydeepflow.early_stopping import EarlyStopping
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.learning_rate_scheduler import LearningRateScheduler
 from pydeepflow.model import Plotting_Utils  # Correct import
@@ -47,11 +48,13 @@ if __name__ == "__main__":
     # Set up model checkpointing
     checkpoint = ModelCheckpoint(save_dir='./checkpoints', monitor='val_loss', save_best_only=True, save_freq=5)
 
-    # Learning Rate Scheduler
+    # CallBack Functions 
     lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
+    early_stop = EarlyStopping(patience=3)
 
     # Train the model and capture history
-    ann.fit(epochs=1000, learning_rate=0.01, lr_scheduler=lr_scheduler, X_val=X_train, y_val=y_train, checkpoint=checkpoint)
+    # increased num epochc to trigger early stopping
+    ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler,early_stop=early_stop, X_val=X_train, y_val=y_train, checkpoint=checkpoint)
 
     # Use Plotting_Utils to plot accuracy and loss
     plot_utils = Plotting_Utils()  
