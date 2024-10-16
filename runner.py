@@ -1,11 +1,14 @@
+# runner.py
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
+from pydeepflow.early_stopping import EarlyStopping
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.learning_rate_scheduler import LearningRateScheduler
-from pydeepflow.model import Plotting_Utils  # Correct import
+from pydeepflow.model import Plotting_Utils  
+from pydeepflow.cross_validator import CrossValidator  
 
 if __name__ == "__main__":
 
@@ -25,13 +28,9 @@ if __name__ == "__main__":
     # Convert labels to one-hot encoding (for multiclass classification)
     y_one_hot = np.eye(len(np.unique(y)))[y]
 
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y_one_hot, test_size=0.2, random_state=42)
-
     # Standardize the features
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    X = scaler.fit_transform(X)
 
     # Ask the user whether to use GPU
     use_gpu_input = input("Use GPU? (y/n): ").strip().lower()
@@ -41,55 +40,58 @@ if __name__ == "__main__":
     hidden_layers = [5, 5]  
     activations = ['relu', 'relu']  
 
-    # Initialize the ANN with softmax output for multiclass classification
-    ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
+    # Initialize the CrossValidator
+    k_folds = 5  # Set the number of folds for cross-validation
+    cross_validator = CrossValidator(n_splits=k_folds)  # Adjusted to use n_splits
 
-    # Set up model checkpointing
-    checkpoint = ModelCheckpoint(save_dir='./checkpoints', monitor='val_loss', save_best_only=True, save_freq=5)
+    # Perform k-fold cross-validation
+    fold_accuracies = []  # To store accuracy for each fold
+    for fold, (train_index, val_index) in enumerate(cross_validator.split(X, y_one_hot)):
+        print(f"Training on fold {fold + 1}/{k_folds}")
 
-    # Learning Rate Scheduler
-    lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
+        # Split data into training and validation sets for the current fold
+        X_train, X_val = X[train_index], X[val_index]
+        y_train, y_val = y_one_hot[train_index], y_one_hot[val_index]
 
-    # Train the model and capture history
-    ann.fit(epochs=1000, learning_rate=0.01, lr_scheduler=lr_scheduler, X_val=X_train, y_val=y_train, checkpoint=checkpoint)
+        # Initialize the ANN for each fold
+        ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
 
-    # Use Plotting_Utils to plot accuracy and loss
+        # Set up model checkpointing
+        checkpoint = ModelCheckpoint(save_dir='./checkpoints', monitor='val_loss', save_best_only=True, save_freq=5)
+
+        # CallBack Functions 
+        lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
+        early_stop = EarlyStopping(patience=3)
+
+        # Train the model and capture history
+        ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler, early_stop=early_stop, 
+                X_val=X_val, y_val=y_val, checkpoint=checkpoint)
+
+        # Evaluate the model on the validation set
+        y_pred_val = ann.predict(X_val)
+        y_val_labels = np.argmax(y_val, axis=1)
+
+        # Adjust prediction shape handling for accuracy calculation
+        if y_pred_val.ndim == 2:  
+            y_pred_val_labels = np.argmax(y_pred_val, axis=1)  # Multi-class classification
+        else:
+            y_pred_val_labels = (y_pred_val >= 0.5).astype(int)  # Binary classification (if applicable)
+
+        # Calculate and store the accuracy for this fold
+        fold_accuracy = np.mean(y_pred_val_labels == y_val_labels)
+        fold_accuracies.append(fold_accuracy)
+        print(f"Fold {fold + 1} Accuracy: {fold_accuracy * 100:.2f}%")
+
+    # Print the average accuracy across all folds
+    average_accuracy = np.mean(fold_accuracies)
+    print(f"Average Accuracy across {k_folds} folds: {average_accuracy * 100:.2f}%")
+
+    # Optionally plot training history of the last fold (if you need)
     plot_utils = Plotting_Utils()  
     plot_utils.plot_training_history(ann.history)  
 
-    # Make predictions on the test set
-    y_pred = ann.predict(X_test)
+    # Make predictions on the test set (optional)
+    # Assuming you have a separate test set prepared
+    # y_pred_test = ann.predict(X_test)
 
-    # Convert one-hot encoded test labels back to integers
-    y_test_labels = np.argmax(y_test, axis=1)
-
-    # Adjust prediction shape handling for accuracy calculation
-    if y_pred.ndim == 1:  
-        y_pred_labels = (y_pred >= 0.5).astype(int)  # Binary classification (if applicable)
-    elif y_pred.ndim == 2:  
-        y_pred_labels = np.argmax(y_pred, axis=1)  # Multi-class classification
-
-    # Calculate the accuracy of the model
-    accuracy = np.mean(y_pred_labels == y_test_labels)
-    print(f"Test Accuracy: {accuracy * 100:.2f}%")
-
-    # Load the best weights from the checkpoint file
-    best_checkpoint_file = './checkpoints/checkpoint_epoch_995.npz'  
-    
-    data = np.load(best_checkpoint_file)
-    print(data.files)  
-
-    ann.load_weights(best_checkpoint_file)
-
-    # Make predictions using the loaded weights
-    y_pred_loaded = ann.predict(X_test)
-
-    # Adjust prediction shape handling for loaded model accuracy
-    if y_pred_loaded.ndim == 1:  
-        y_pred_loaded_labels = (y_pred_loaded >= 0.5).astype(int)
-    elif y_pred_loaded.ndim == 2:  
-        y_pred_loaded_labels = np.argmax(y_pred_loaded, axis=1)
-
-    accuracy_loaded = np.mean(y_pred_loaded_labels == y_test_labels)
-    
-    print(f"Loaded Model Test Accuracy: {accuracy_loaded * 100:.2f}%")
+    # Calculate and print accuracy on the test set as needed
