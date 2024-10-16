@@ -1,10 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt  
-from .activations import activation, activation_derivative  
-from .losses import get_loss_function, get_loss_derivative  
-from .device import Device                                  
+import matplotlib.pyplot as plt
+from .activations import activation, activation_derivative
+from .losses import get_loss_function, get_loss_derivative
+from .device import Device
 from .regularization import Regularization
 from .checkpoints import ModelCheckpoint
+from .cross_validator import CrossValidator  # Ensure this import points to the correct path
 from tqdm import tqdm
 import time
 
@@ -24,7 +25,7 @@ class Multi_Layer_ANN:
         if Y_train.ndim == 1 or Y_train.shape[1] == 1:
             self.layers = [X_train.shape[1]] + hidden_layers + [1]
             self.output_activation = 'sigmoid'
-        else: 
+        else:
             self.layers = [X_train.shape[1]] + hidden_layers + [Y_train.shape[1]]
             self.output_activation = 'softmax'
 
@@ -54,7 +55,6 @@ class Multi_Layer_ANN:
         # Store metrics for plotting
         self.history = {'train_loss': [], 'val_loss': [], 'train_accuracy': [], 'val_accuracy': []}
 
-
     def forward_propagation(self, X):
         """
         Performs forward propagation through the network.
@@ -67,7 +67,7 @@ class Multi_Layer_ANN:
             Z = self.device.dot(activations[-1], self.weights[i]) + self.biases[i]
             Z_values.append(Z)
             A = activation(Z, self.activations[i], self.device)
-            A = self.regularization.apply_dropout(A, training=self.training) 
+            A = self.regularization.apply_dropout(A, training=self.training)
             activations.append(A)
 
         # Forward pass through the output layer
@@ -92,22 +92,25 @@ class Multi_Layer_ANN:
             error = self.device.dot(deltas[-1], self.weights[i + 1].T)
             delta = error * activation_derivative(activations[i + 1], self.activations[i], self.device)
             deltas.append(delta)
-        
+
         deltas.reverse()
 
         # Update weights and biases with L2 regularization
         for i in range(len(self.weights)):
             self.weights[i] += self.device.dot(activations[i].T, deltas[i]) * learning_rate
             self.biases[i] += self.device.sum(deltas[i], axis=0, keepdims=True) * learning_rate
-        # Apply L2 regularization to the weights
-        self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
+            # Apply L2 regularization to the weights
+            self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
-    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, X_val=None, y_val=None, checkpoint=None):   
+    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=False):
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
+        :param verbose (bool): toggle verbosity during training
         """
+        if early_stop:
+            assert X_val is not None and y_val is not None, "Validation set is required for early stopping"
 
-        for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green'):
+        for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green', disable=verbose):
             start_time = time.time()
 
             # Adjust the learning rate using the scheduler if provided
@@ -147,15 +150,24 @@ class Multi_Layer_ANN:
                     checkpoint.save_weights(epoch, self.weights, self.biases, val_loss)
 
             # Log training progress
-            epoch_time = time.time() - start_time
-            if epoch % 10 == 0:
-                print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
-                      f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
-                      f"Learning Rate: {current_lr:.6f}")
+            if verbose:
+                epoch_time = time.time() - start_time
+                if epoch % 10 == 0:
+                    print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
+                          f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
+                          f"Learning Rate: {current_lr:.6f}")
+                
+            # Early stopping 
+            early_stop(val_loss)
+            if early_stop.early_stop:
+                print('\n', "#" * 150, '\n\n', "early stop at - "
+                      f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
+                      f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% "
+                      f"Learning Rate: {current_lr:.6f}", '\n\n', "#" * 150)
+                break
                 
         print("Training Completed!")
-        
-        
+
     def load_weights(self, checkpoint_path):
         """
         Loads model weights from a checkpoint.
@@ -177,48 +189,33 @@ class Multi_Layer_ANN:
             return self.device.asnumpy((activations[-1] >= 0.5).astype(int)).flatten()
         elif self.output_activation == 'softmax':
             return self.device.asnumpy(np.argmax(activations[-1], axis=1))
-        
-    def predict_prob(self, X):
-        """
-        Predicts the probability distribution for the input data.
-        """
-        activations, _ = self.forward_propagation(self.device.array(X))
-        return self.device.asnumpy(activations[-1])
-
 
 class Plotting_Utils:
-    """
-    Utility class for plotting training and validation metrics.
-    """
-    def plot_training_history(self, history, metrics=('loss', 'accuracy'), figure='history.png'):
+    @staticmethod
+    def plot_training_history(history):
         """
-        Plots the training and validation loss/accuracy over epochs.
-        Parameters:
-            history (dict): A dictionary containing training history with keys 'train_loss', 'val_loss', 
-                            'train_accuracy', and 'val_accuracy'.
-            metrics (tuple): The metrics to plot ('loss' or 'accuracy').
+        Plots the training history for loss and accuracy.
         """
-        epochs = len(history['train_loss'])
-        fig, ax = plt.subplots(1, len(metrics), figsize=(12, 5))
+        epochs = range(1, len(history['train_loss']) + 1)
+        plt.figure(figsize=(12, 4))
 
-        if 'loss' in metrics:
-            ax[0].plot(range(1, epochs + 1), history['train_loss'], label='Train Loss', color='blue')
-            if 'val_loss' in history:
-                ax[0].plot(range(1, epochs + 1), history['val_loss'], label='Val Loss', color='orange')
-            ax[0].set_xlabel('Epochs')
-            ax[0].set_ylabel('Loss')
-            ax[0].set_title('Training vs Validation Loss')
-            ax[0].legend()
+        # Plotting loss
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs, history['train_loss'], label='Training Loss', color='blue')
+        plt.plot(epochs, history['val_loss'], label='Validation Loss', color='orange')
+        plt.title('Training and Validation Loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
 
-        if 'accuracy' in metrics:
-            ax[1].plot(range(1, epochs + 1), history['train_accuracy'], label='Train Accuracy', color='green')
-            if 'val_accuracy' in history:
-                ax[1].plot(range(1, epochs + 1), history['val_accuracy'], label='Val Accuracy', color='red')
-            ax[1].set_xlabel('Epochs')
-            ax[1].set_ylabel('Accuracy')
-            ax[1].set_title('Training vs Validation Accuracy')
-            ax[1].legend()
+        # Plotting accuracy
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs, history['train_accuracy'], label='Training Accuracy', color='green')
+        plt.plot(epochs, history['val_accuracy'], label='Validation Accuracy', color='red')
+        plt.title('Training and Validation Accuracy')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.legend()
 
         plt.tight_layout()
-        plt.savefig(figure)
         plt.show()
