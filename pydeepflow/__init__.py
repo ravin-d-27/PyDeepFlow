@@ -1,4 +1,3 @@
-# pydeepflow/__init__.py
 from .activations import activation, activation_derivative
 from .losses import get_loss_function, get_loss_derivative
 from .device import Device
@@ -7,7 +6,7 @@ from .learning_rate_scheduler import LearningRateScheduler
 from .checkpoints import ModelCheckpoint
 from .regularization import Regularization
 from .early_stopping import EarlyStopping
-from .cross_validator import CrossValidator  ss
+from .cross_validator import CrossValidator  # Add CrossValidator import
 
 __all__ = [
     "activation",
@@ -21,5 +20,5 @@ __all__ = [
     "ModelCheckpoint",
     "Regularization",
     "EarlyStopping",
-    "CrossValidator",  
+    "CrossValidator",  # Include CrossValidator in the exported members
 ]
