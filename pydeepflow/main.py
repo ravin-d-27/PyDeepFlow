@@ -2,14 +2,12 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from model import Multi_Layer_ANN
+from pydeepflow.model import Multi_Layer_ANN
+from pydeepflow.cross_validator import CrossValidator  # Import CrossValidator
 
-if __name__ == "__main__":
-    
-    # Load Iris dataset
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+def load_and_preprocess_data(url):
+    # Load the Iris dataset
     df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
-
     print(df.head())
 
     # Encode species labels to integers
@@ -22,13 +20,19 @@ if __name__ == "__main__":
     # Convert labels to one-hot encoding
     y_one_hot = np.eye(len(np.unique(y)))[y]
 
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y_one_hot, test_size=0.2, random_state=42)
-
     # Standardize the features
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    X = scaler.fit_transform(X)
+
+    return X, y_one_hot
+
+if __name__ == "__main__":
+    # Configuration
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+    n_splits = 5  # Number of folds for cross-validation
+
+    # Load and preprocess data
+    X, y_one_hot = load_and_preprocess_data(url)
 
     # Ask the user whether to use GPU
     use_gpu_input = input("Use GPU? (y/n): ").strip().lower()
@@ -39,18 +43,16 @@ if __name__ == "__main__":
     activations = ['relu', 'relu']
 
     # Initialize the ANN with use_gpu option
-    ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
+    ann = Multi_Layer_ANN(X, y_one_hot, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
 
-    # Train the model
-    ann.fit(epochs=1000, learning_rate=0.01)
+    # Initialize CrossValidator and perform K-Fold Cross Validation
+    cross_validator = CrossValidator(k=n_splits, metrics=["accuracy"])
+    results = cross_validator.evaluate(ann, X, y_one_hot, epochs=1000, learning_rate=0.01, verbose=True)
 
-    # Make predictions on the test set
-    y_pred = ann.predict(X_test)
-    print(y_pred)
+    # Print cross-validation results
+    print("Cross-Validation Results:", results)
 
-    # Convert one-hot encoded test labels back to integers
-    y_test_labels = np.argmax(y_test, axis=1)
+    # Optionally train the model on the full dataset if needed
+    # ann.fit(epochs=1000, learning_rate=0.01)
 
-    # Calculate the accuracy of the model
-    accuracy = np.mean(y_pred == y_test_labels)
-    print(f"Test Accuracy: {accuracy * 100:.2f}%")
+    # Example of making predictions on the entire dataset or a separate test set can be added here
