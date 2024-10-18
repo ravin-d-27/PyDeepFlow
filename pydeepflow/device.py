@@ -266,3 +266,30 @@ class Device:
             The maximum value(s) in `x` along the specified axis.
         """
         return cp.max(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.max(x, axis=axis, keepdims=keepdims)
+    
+    def norm(self, x, ord=None, axis=None, keepdims=False):
+        """
+        Matrix or vector norm.
+
+        This function is able to return one of eight different matrix norms,
+        or one of an infinite number of vector norms (described below), depending
+        on the value of the ``ord`` parameter.
+
+        Parameters
+        ----------
+        x : np.ndarray or cp.ndarray
+            Input array.
+        ord : {non-zero int, inf, -inf, 'fro', 'nuc'}, optional (default=None)
+            Order of the norm.
+        axis :int or None, optional (default=None)
+            Axis along which to find the norm.
+        keepdims : bool, optional (default=False)
+            Whether to keep the reduced dimensions.
+
+        Returns:
+        --------
+        float or np.ndarray or cp.ndarray
+            Norm of matrix or vector(s).
+        """
+
+        return cp.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims) if self.use_gpu else np.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
