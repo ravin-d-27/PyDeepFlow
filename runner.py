@@ -66,16 +66,14 @@ if __name__ == "__main__":
     # Convert one-hot encoded test labels back to integers
     y_test_labels = np.argmax(y_test, axis=1)
 
-    # # Check the shape of y_pred
-    # if y_pred.ndim == 1:  
-    #     y_pred_labels = (y_pred >= 0.5).astype(int)  
-    # elif y_pred.ndim == 2:  
-    #     y_pred_labels = np.argmax(y_pred, axis=1)  
+    # Adjust prediction shape handling for accuracy calculation
+    if y_pred.ndim == 1:  
+        y_pred_labels = (y_pred >= 0.5).astype(int)  # Binary classification (if applicable)
+    elif y_pred.ndim == 2:  
+        y_pred_labels = np.argmax(y_pred, axis=1)  # Multi-class classification
 
     # Calculate the accuracy of the model
-    
-    #accuracy = np.mean(y_pred_labels == y_test_labels)
-    accuracy = np.mean(y_pred == y_test_labels)
+    accuracy = np.mean(y_pred_labels == y_test_labels)
     print(f"Test Accuracy: {accuracy * 100:.2f}%")
 
     # Load the best weights from the checkpoint file
@@ -89,12 +87,12 @@ if __name__ == "__main__":
     # Make predictions using the loaded weights
     y_pred_loaded = ann.predict(X_test)
 
-    # Calculate accuracy of predictions using loaded weights
-    # if y_pred_loaded.ndim == 1:  
-    #     y_pred_loaded_labels = (y_pred_loaded >= 0.5).astype(int)
-    # elif y_pred_loaded.ndim == 2:  
-    #     y_pred_loaded_labels = np.argmax(y_pred_loaded, axis=1)
+    # Adjust prediction shape handling for loaded model accuracy
+    if y_pred_loaded.ndim == 1:  
+        y_pred_loaded_labels = (y_pred_loaded >= 0.5).astype(int)
+    elif y_pred_loaded.ndim == 2:  
+        y_pred_loaded_labels = np.argmax(y_pred_loaded, axis=1)
 
-    accuracy_loaded = np.mean(y_pred_loaded == y_test_labels)
+    accuracy_loaded = np.mean(y_pred_loaded_labels == y_test_labels)
     
     print(f"Loaded Model Test Accuracy: {accuracy_loaded * 100:.2f}%")
