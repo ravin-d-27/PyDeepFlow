@@ -78,12 +78,13 @@ class Multi_Layer_ANN:
 
         return activations, Z_values
 
-    def backpropagation(self, X, y, activations, Z_values, learning_rate):
+    def backpropagation(self, X, y, activations, Z_values, learning_rate, clip_value = None):
         """
         Performs backpropagation through the network to compute weight updates.
         """
         # Calculate the error in the output layer
-        output_error = y - activations[-1]
+        output_error = activations[-1] - y
+        #print(output_error)
         d_output = output_error * activation_derivative(activations[-1], self.output_activation, self.device)
 
         # Backpropagate through the network
@@ -96,13 +97,35 @@ class Multi_Layer_ANN:
         deltas.reverse()
 
         # Update weights and biases with L2 regularization
+        gradient = {'weights':[],'biases':[]}
         for i in range(len(self.weights)):
-            self.weights[i] += self.device.dot(activations[i].T, deltas[i]) * learning_rate
-            self.biases[i] += self.device.sum(deltas[i], axis=0, keepdims=True) * learning_rate
+            grad_weights = self.device.dot(activations[i].T, deltas[i])
+            grad_biases = self.device.sum(deltas[i], axis=0, keepdims=True)
+            
+            # Clip gradients if clip_value is specified
+            if clip_value is not None:
+                # Clip weights gradients
+                grad_weights_norm = self.device.norm(grad_weights)
+                if grad_weights_norm > clip_value:
+                    grad_weights = grad_weights * (clip_value / grad_weights_norm)
+
+                # Clip bias gradients
+                grad_biases_norm = self.device.norm(grad_biases)
+                if grad_biases_norm > clip_value:
+                    grad_biases = grad_biases * (clip_value / grad_biases_norm)
+            
+            gradient['weights'].append(grad_weights)
+            gradient['biases'].append(grad_biases)
+        
+        for i in range(len(self.weights)):
+            self.weights[i] -= gradient['weights'][i] * learning_rate
+            self.biases[i] -= gradient['biases'][i] * learning_rate
+
+        
         # Apply L2 regularization to the weights
         self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
-    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop = None, X_val=None, y_val=None, checkpoint=None, verbose=False):   
+    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop = None, X_val=None, y_val=None, checkpoint=None, verbose=False, clipping_threshold = None):   
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
         :param verbose (bool): toggle verbosity during training
@@ -118,11 +141,11 @@ class Multi_Layer_ANN:
                 current_lr = lr_scheduler.get_lr(epoch)
             else:
                 current_lr = learning_rate
-            
+
             # Forward and Backpropagation
             self.training = True
             activations, Z_values = self.forward_propagation(self.X_train)
-            self.backpropagation(self.X_train, self.y_train, activations, Z_values, current_lr)
+            self.backpropagation(self.X_train, self.y_train, activations, Z_values, current_lr,clip_value=clipping_threshold)
 
             self.training = False
 
@@ -157,14 +180,15 @@ class Multi_Layer_ANN:
                         f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
                         f"Learning Rate: {current_lr:.6f}")
                 
-            # Early stopping 
-            early_stop(val_loss)
-            if early_stop.early_stop:
-                print('\n',"#"*150,'\n\n', "early stop at - "
-                      f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
-                      f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% "
-                      f"Learning Rate: {current_lr:.6f}",'\n\n', "#"*150)
-                break
+            # Early stopping
+            if early_stop: 
+                early_stop(val_loss)
+                if early_stop.early_stop:
+                    print('\n',"#"*150,'\n\n', "early stop at - "
+                        f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
+                        f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% "
+                        f"Learning Rate: {current_lr:.6f}",'\n\n', "#"*150)
+                    break
                 
         print("Training Completed!")
         

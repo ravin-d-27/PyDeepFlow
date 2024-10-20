@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     # Train the model and capture history
     # increased num epochc to trigger early stopping
-    ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler,early_stop=early_stop, X_val=X_train, y_val=y_train, checkpoint=checkpoint)
+    ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler,early_stop=early_stop, X_val=X_train, y_val=y_train, checkpoint=checkpoint,clipping_threshold=1)
 
     # Use Plotting_Utils to plot accuracy and loss
     plot_utils = Plotting_Utils()  
