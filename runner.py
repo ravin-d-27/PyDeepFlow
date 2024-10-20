@@ -1,7 +1,5 @@
-# runner.py
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
 from pydeepflow.early_stopping import EarlyStopping
@@ -42,7 +40,7 @@ if __name__ == "__main__":
 
     # Initialize the CrossValidator
     k_folds = 5  # Set the number of folds for cross-validation
-    cross_validator = CrossValidator(n_splits=k_folds)  # Adjusted to use n_splits
+    cross_validator = CrossValidator(n_splits=k_folds)
 
     # Perform k-fold cross-validation
     fold_accuracies = []  # To store accuracy for each fold
@@ -59,7 +57,7 @@ if __name__ == "__main__":
         # Set up model checkpointing
         checkpoint = ModelCheckpoint(save_dir='./checkpoints', monitor='val_loss', save_best_only=True, save_freq=5)
 
-        # CallBack Functions 
+        # Callback functions 
         lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
         early_stop = EarlyStopping(patience=3)
 
@@ -86,12 +84,7 @@ if __name__ == "__main__":
     average_accuracy = np.mean(fold_accuracies)
     print(f"Average Accuracy across {k_folds} folds: {average_accuracy * 100:.2f}%")
 
-    # Optionally plot training history of the last fold (if you need)
+    # Optionally plot training history of the last fold
     plot_utils = Plotting_Utils()  
-    plot_utils.plot_training_history(ann.history)  
+    plot_utils.plot_training_history(ann.history)
 
-    # Make predictions on the test set (optional)
-    # Assuming you have a separate test set prepared
-    # y_pred_test = ann.predict(X_test)
-
-    # Calculate and print accuracy on the test set as needed
