@@ -205,35 +205,6 @@ class Multi_Layer_ANN:
         accuracy = np.mean((predictions >= 0.5).astype(int) == y) if self.output_activation == 'sigmoid' else np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
         return loss, accuracy
 
-    def plot_training_progress(self):
-        """
-        Plots the training loss and accuracy over time for better visualization of model performance.
-        """
-        epochs = range(1, len(self.history['train_loss']) + 1)
-
-        # Plot training & validation loss
-        plt.figure(figsize=(12, 6))
-        plt.subplot(1, 2, 1)
-        plt.plot(epochs, self.history['train_loss'], 'b', label='Training loss')
-        if len(self.history['val_loss']) > 0:
-            plt.plot(epochs, self.history['val_loss'], 'r', label='Validation loss')
-        plt.title('Training and Validation Loss')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.legend()
-
-        # Plot training & validation accuracy
-        plt.subplot(1, 2, 2)
-        plt.plot(epochs, self.history['train_accuracy'], 'b', label='Training accuracy')
-        if len(self.history['val_accuracy']) > 0:
-            plt.plot(epochs, self.history['val_accuracy'], 'r', label='Validation accuracy')
-        plt.title('Training and Validation Accuracy')
-        plt.xlabel('Epochs')
-        plt.ylabel('Accuracy')
-        plt.legend()
-
-        plt.tight_layout()
-        plt.show()
 
     def load_checkpoint(self, checkpoint_path):
         """
@@ -242,3 +213,40 @@ class Multi_Layer_ANN:
         print(f"Loading model weights from {checkpoint_path}")
         checkpoint = ModelCheckpoint(checkpoint_path)
         self.weights, self.biases = checkpoint.load_weights()
+
+
+class Plotting_Utils:
+    """
+    Utility class for plotting training and validation metrics.
+    """
+    def plot_training_history(self, history, metrics=('loss', 'accuracy'), figure='history.png'):
+        """
+        Plots the training and validation loss/accuracy over epochs.
+        Parameters:
+            history (dict): A dictionary containing training history with keys 'train_loss', 'val_loss', 
+                            'train_accuracy', and 'val_accuracy'.
+            metrics (tuple): The metrics to plot ('loss' or 'accuracy').
+        """
+        epochs = len(history['train_loss'])
+        fig, ax = plt.subplots(1, len(metrics), figsize=(12, 5))
+
+        if 'loss' in metrics:
+            ax[0].plot(range(epochs), history['train_loss'], label='Train Loss')
+            if 'val_loss' in history:
+                ax[0].plot(range(epochs), history['val_loss'], label='Validation Loss')
+            ax[0].set_title("Loss over Epochs")
+            ax[0].set_xlabel("Epochs")
+            ax[0].set_ylabel("Loss")
+            ax[0].legend()
+
+        if 'accuracy' in metrics:
+            ax[1].plot(range(epochs), history['train_accuracy'], label='Train Accuracy')
+            if 'val_accuracy' in history:
+                ax[1].plot(range(epochs), history['val_accuracy'], label='Validation Accuracy')
+            ax[1].set_title("Accuracy over Epochs")
+            ax[1].set_xlabel("Epochs")
+            ax[1].set_ylabel("Accuracy")
+            ax[1].legend()
+        plt.savefig(figure)
+        plt.tight_layout()
+        plt.show()

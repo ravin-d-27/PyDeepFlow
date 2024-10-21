@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
 from pydeepflow.model import Multi_Layer_ANN
 from pydeepflow.early_stopping import EarlyStopping
 from pydeepflow.checkpoints import ModelCheckpoint
@@ -10,18 +12,13 @@ from pydeepflow.cross_validator import CrossValidator
 
 if __name__ == "__main__":
 
-    # Load Iris dataset
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
-    df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
+    # Load Iris dataset from sklearn
+    iris = load_iris()
+    X = iris.data
+    y = iris.target
 
-    print(df.head())
-
-    # Encode species labels to integers
-    df['species'] = df['species'].astype('category').cat.codes
-
-    # Split data into features (X) and labels (y)
-    X = df.iloc[:, :-1].values
-    y = df.iloc[:, -1].values
+    print("First five rows of the dataset:")
+    print(pd.DataFrame(X, columns=iris.feature_names).head())
 
     # Convert labels to one-hot encoding (for multiclass classification)
     y_one_hot = np.eye(len(np.unique(y)))[y]
@@ -31,7 +28,7 @@ if __name__ == "__main__":
     X = scaler.fit_transform(X)
 
     # Ask the user whether to use GPU
-    use_gpu_input = input("Use GPU? (y/n): ").strip().lower()
+    use_gpu_input = False
     use_gpu = True if use_gpu_input == 'y' else False
 
     # Define the architecture of the network
@@ -62,8 +59,10 @@ if __name__ == "__main__":
         early_stop = EarlyStopping(patience=3)
 
         # Train the model and capture history
-        ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler, early_stop=early_stop, 
-                X_val=X_val, y_val=y_val, checkpoint=checkpoint)
+        # ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler, early_stop=early_stop, 
+        #         X_val=X_val, y_val=y_val, checkpoint=checkpoint)
+        
+        ann.fit(epochs=1000, learning_rate=0.01, lr_scheduler=lr_scheduler, X_val=X_val, y_val=y_val)
 
         # Evaluate the model on the validation set
         y_pred_val = ann.predict(X_val)
@@ -87,4 +86,3 @@ if __name__ == "__main__":
     # Optionally plot training history of the last fold
     plot_utils = Plotting_Utils()  
     plot_utils.plot_training_history(ann.history)
-
