@@ -1,11 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from .activations import activation, activation_derivative
-from .losses import get_loss_function, get_loss_derivative
-from .device import Device
-from .regularization import Regularization
-from .checkpoints import ModelCheckpoint
-from .cross_validator import CrossValidator  # Ensure this import points to the correct path
+from pydeepflow.activations import activation, activation_derivative
+from pydeepflow.losses import get_loss_function, get_loss_derivative
+from pydeepflow.device import Device
+from pydeepflow.regularization import Regularization
+from pydeepflow.checkpoints import ModelCheckpoint
+from pydeepflow.cross_validator import CrossValidator
+from pydeepflow.batch_normalization import BatchNormalization
 from tqdm import tqdm
 import time
 
@@ -14,7 +15,7 @@ class Multi_Layer_ANN:
     A Multi-Layer Artificial Neural Network (ANN) class for binary and multi-class classification tasks.
     """
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
-                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0):
+                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False):
         """
         Initializes the ANN model with the provided architecture and configurations.
         """
@@ -55,6 +56,14 @@ class Multi_Layer_ANN:
         # Store metrics for plotting
         self.history = {'train_loss': [], 'val_loss': [], 'train_accuracy': [], 'val_accuracy': []}
 
+        # Batch Normalization setup
+        self.use_batch_norm = use_batch_norm
+        self.batch_norm_layers = []
+        
+        if self.use_batch_norm:
+            for i in range(len(self.layers) - 2):  # Exclude input and output layers
+                self.batch_norm_layers.append(BatchNormalization(self.layers[i+1], device=self.device))
+
     def forward_propagation(self, X):
         """
         Performs forward propagation through the network.
@@ -62,9 +71,11 @@ class Multi_Layer_ANN:
         activations = [X]
         Z_values = []
 
-        # Forward pass through hidden layers with dropout
+        # Forward pass through hidden layers with dropout and batch normalization
         for i in range(len(self.weights) - 1):
             Z = self.device.dot(activations[-1], self.weights[i]) + self.biases[i]
+            if self.use_batch_norm:
+                Z = self.batch_norm_layers[i].normalize(Z, training=self.training)
             Z_values.append(Z)
             A = activation(Z, self.activations[i], self.device)
             A = self.regularization.apply_dropout(A, training=self.training)
@@ -90,6 +101,8 @@ class Multi_Layer_ANN:
         deltas = [d_output]
         for i in reversed(range(len(self.weights) - 1)):
             error = self.device.dot(deltas[-1], self.weights[i + 1].T)
+            if self.use_batch_norm:
+                error = self.batch_norm_layers[i].backprop(Z_values[i], error, learning_rate)
             delta = error * activation_derivative(activations[i + 1], self.activations[i], self.device)
             deltas.append(delta)
 
@@ -130,7 +143,7 @@ class Multi_Layer_ANN:
         if early_stop:
             assert X_val is not None and y_val is not None, "Validation set is required for early stopping"
 
-        for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green', disable=verbose):
+        for epoch in tqdm(range(epochs), desc="Training Progress", ncols=100, ascii="░▒█", colour='green', disable=not verbose):
             start_time = time.time()
 
             # Adjust the learning rate using the scheduler if provided
@@ -205,7 +218,6 @@ class Multi_Layer_ANN:
         accuracy = np.mean((predictions >= 0.5).astype(int) == y) if self.output_activation == 'sigmoid' else np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
         return loss, accuracy
 
-
     def load_checkpoint(self, checkpoint_path):
         """
         Loads model weights from a checkpoint.
@@ -213,6 +225,32 @@ class Multi_Layer_ANN:
         print(f"Loading model weights from {checkpoint_path}")
         checkpoint = ModelCheckpoint(checkpoint_path)
         self.weights, self.biases = checkpoint.load_weights()
+
+    def save_model(self, file_path):
+        """
+        Saves the model weights and biases to a file.
+        """
+        model_data = {
+            'weights': [w.tolist() for w in self.weights],
+            'biases': [b.tolist() for b in self.biases],
+            'layers': self.layers,
+            'activations': self.activations,
+            'output_activation': self.output_activation
+        }
+        np.save(file_path, model_data)
+        print(f"Model saved to {file_path}")
+
+    def load_model(self, file_path):
+        """
+        Loads the model weights and biases from a file.
+        """
+        model_data = np.load(file_path, allow_pickle=True).item()
+        self.weights = [self.device.array(w) for w in model_data['weights']]
+        self.biases = [self.device.array(b) for b in model_data['biases']]
+        self.layers = model_data['layers']
+        self.activations = model_data['activations']
+        self.output_activation = model_data['output_activation']
+        print(f"Model loaded from {file_path}")
 
 
 class Plotting_Utils:
