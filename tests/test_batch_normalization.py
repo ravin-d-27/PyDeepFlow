@@ -1,77 +1,32 @@
+import unittest
 import numpy as np
+from pydeepflow.batch_normalization import BatchNormalization
+from pydeepflow.device import Device
 
-class BatchNormalization:
-    def __init__(self, layer_size, epsilon=1e-5, momentum=0.9, device=np):
-        """
-        Initializes the BatchNormalization class.
+class TestBatchNormalization(unittest.TestCase):
+    def setUp(self):
+        self.device = Device(use_gpu=False)
+        self.bn = BatchNormalization(4, device=self.device)
 
-        Parameters:
-        - layer_size: The number of units in the layer where batch normalization is applied.
-        - epsilon: A small constant added to the denominator to prevent division by zero.
-        - momentum: Momentum for updating the running mean and variance.
-        - device: NumPy or CuPy (for GPU support). Default is NumPy.
-        """
-        self.epsilon = epsilon
-        self.momentum = momentum
-        self.device = device
-        
-        # Initialize gamma (scale) and beta (shift) parameters
-        self.gamma = self.device.ones((1, layer_size))
-        self.beta = self.device.zeros((1, layer_size))
-        
-        # Initialize running mean and variance (used during inference)
-        self.running_mean = self.device.zeros((1, layer_size))
-        self.running_variance = self.device.ones((1, layer_size))
-    
-    def normalize(self, Z, training=True):
-        """
-        Applies batch normalization to the input.
+    def test_normalize_training(self):
+        Z = self.device.array([[1, 2, 3, 4], [4, 3, 2, 1], [5, 6, 7, 8]])
+        normalized = self.bn.normalize(Z, training=True)
+        self.assertEqual(normalized.shape, Z.shape)
+        self.assertAlmostEqual(self.device.mean(normalized), 0, places=7)
+        self.assertAlmostEqual(self.device.var(normalized), 1, places=2)
 
-        Parameters:
-        - Z: The input to normalize (output from the previous layer before activation).
-        - training: Boolean flag to indicate whether it's in training or inference mode.
+    def test_normalize_inference(self):
+        Z = self.device.array([[1, 2, 3, 4], [4, 3, 2, 1], [5, 6, 7, 8]])
+        self.bn.normalize(Z, training=True)  # Update running stats
+        normalized = self.bn.normalize(Z, training=False)
+        self.assertEqual(normalized.shape, Z.shape)
 
-        Returns:
-        - Z_scaled: The normalized and scaled input.
-        """
-        if training:
-            # Compute batch mean and variance
-            batch_mean = self.device.mean(Z, axis=0, keepdims=True)
-            batch_variance = self.device.var(Z, axis=0, keepdims=True)
-            
-            # Normalize the batch
-            Z_normalized = (Z - batch_mean) / self.device.sqrt(batch_variance + self.epsilon)
-            
-            # Update running mean and variance (for inference)
-            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
-            self.running_variance = self.momentum * self.running_variance + (1 - self.momentum) * batch_variance
-        else:
-            # During inference, use running mean and variance
-            Z_normalized = (Z - self.running_mean) / self.device.sqrt(self.running_variance + self.epsilon)
-        
-        # Scale and shift the normalized values
-        Z_scaled = self.gamma * Z_normalized + self.beta
-        
-        return Z_scaled
-    
-    def backprop(self, Z, dZ, learning_rate):
-        """
-        Performs the backpropagation step for batch normalization.
+    def test_backprop(self):
+        Z = self.device.array([[1, 2, 3, 4], [4, 3, 2, 1], [5, 6, 7, 8]])
+        dZ = self.device.array([[0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1], [0.5, 0.6, 0.7, 0.8]])
+        self.bn.normalize(Z, training=True)
+        output = self.bn.backprop(Z, dZ, learning_rate=0.01)
+        self.assertEqual(output.shape, dZ.shape)
 
-        Parameters:
-        - Z: The input to the batch normalization layer (before normalization).
-        - dZ: The gradient of the loss with respect to the output of this layer.
-        - learning_rate: The learning rate for updating gamma and beta.
-
-        Returns:
-        - dZ: The modified gradient for further backpropagation.
-        """
-        # Compute gradients for gamma and beta
-        dgamma = self.device.sum(dZ * Z, axis=0, keepdims=True)
-        dbeta = self.device.sum(dZ, axis=0, keepdims=True)
-        
-        # Update gamma and beta using gradient descent
-        self.gamma -= learning_rate * dgamma
-        self.beta -= learning_rate * dbeta
-        
-        return dZ  # Pass on the gradient to the previous layer
+if __name__ == '__main__':
+    unittest.main()
