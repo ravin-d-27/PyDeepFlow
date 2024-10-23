@@ -136,7 +136,7 @@ class Multi_Layer_ANN:
             # Apply L2 regularization to the weights
             self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
-    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=False, clipping_threshold=None):
+    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=True, clipping_threshold=None):
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
         """

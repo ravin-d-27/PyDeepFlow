@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="pydeepflow",
-    version="0.1.9",  # Updated version
+    version="1.0.0",  # Updated version
     author="Ravin D",
     author_email="ravin.d3107@outlook.com",
     description="A deep learning package optimized for performing Deep Learning Tasks, easy to learn and integrate into projects",

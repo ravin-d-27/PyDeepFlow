@@ -38,8 +38,8 @@ class ModelCheckpoint:
         # Prepare data to save
         data = {}
         for i, (w, b) in enumerate(zip(weights, biases)):
-            data[f'weights_layer_{i}'] = w  # Correctly saving with this key
-            data[f'biases_layer_{i}'] = b    # Correctly saving with this key
+            data[f'weights_layer_{i}'] = w  
+            data[f'biases_layer_{i}'] = b    
         
         # Save as .npz file
         np.savez(checkpoint_path, **data)

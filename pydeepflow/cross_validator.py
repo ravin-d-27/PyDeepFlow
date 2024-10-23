@@ -43,5 +43,5 @@ class CrossValidator:
         for metric in metrics:
             if metric == "accuracy":
                 results['accuracy'] = np.mean(y_true == y_pred)
-            # Add more metrics as needed (e.g., precision, recall)
+            
         return results

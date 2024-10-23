@@ -6,7 +6,8 @@ from .learning_rate_scheduler import LearningRateScheduler
 from .checkpoints import ModelCheckpoint
 from .regularization import Regularization
 from .early_stopping import EarlyStopping
-from .cross_validator import CrossValidator  # Add CrossValidator import
+from .cross_validator import CrossValidator
+from .batch_normalization import BatchNormalization
 
 __all__ = [
     "activation",
@@ -20,5 +21,6 @@ __all__ = [
     "ModelCheckpoint",
     "Regularization",
     "EarlyStopping",
-    "CrossValidator",  # Include CrossValidator in the exported members
+    "CrossValidator",  
+    "BatchNormalization",
 ]

@@ -293,3 +293,60 @@ class Device:
         """
 
         return cp.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims) if self.use_gpu else np.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
+
+    def ones(self, shape):
+        """
+        Creates an array of ones with the specified shape.
+
+        Parameters:
+        -----------
+        shape : tuple of ints
+            The shape of the output array.
+
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            An array of ones, either using NumPy or CuPy.
+        """
+        return cp.ones(shape) if self.use_gpu else np.ones(shape)
+    
+    
+    def mean(self, x, axis=None, keepdims=False):
+        """
+        Computes the mean of the input array along the specified axis.
+
+        Parameters:
+        -----------
+        x : np.ndarray or cp.ndarray
+            The input array.
+        axis : int or tuple of ints, optional
+            Axis or axes along which the means are computed.
+        keepdims : bool, optional
+            If True, the reduced dimensions are retained.
+
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            The mean of the input array along the specified axis.
+        """
+        return cp.mean(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.mean(x, axis=axis, keepdims=keepdims)
+
+    def var(self, x, axis=None, keepdims=False):
+        """
+        Computes the variance of an array along a specified axis.
+
+        Parameters:
+        ----------- 
+        x : np.ndarray or cp.ndarray
+            Input array.
+        axis : int or None, optional (default=None)
+            Axis along which the variance is computed.
+        keepdims : bool, optional (default=False)
+            If True, the reduced dimensions will be retained.
+
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            The variance of the input array along the specified axis.
+        """
+        return cp.var(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.var(x, axis=axis, keepdims=keepdims)

@@ -27,16 +27,16 @@ if __name__ == "__main__":
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
 
-    # Ask the user whether to use GPU
+    # Ask the user whether to use GPU (simulated as False for this example)
     use_gpu_input = False
     use_gpu = True if use_gpu_input == 'y' else False
 
     # Define the architecture of the network
-    hidden_layers = [5, 5]  
-    activations = ['relu', 'relu']  
+    hidden_layers = [5, 5]  # Example: two hidden layers with 5 neurons each
+    activations = ['relu', 'relu']  # ReLU activations for the hidden layers
 
     # Initialize the CrossValidator
-    k_folds = 5  # Set the number of folds for cross-validation
+    k_folds = 10 # Set the number of folds for cross-validation
     cross_validator = CrossValidator(n_splits=k_folds)
 
     # Perform k-fold cross-validation
@@ -48,40 +48,35 @@ if __name__ == "__main__":
         X_train, X_val = X[train_index], X[val_index]
         y_train, y_val = y_one_hot[train_index], y_one_hot[val_index]
 
-        # Initialize the ANN for each fold
-        ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
+        # Initialize the ANN for each fold without batch normalization
+        ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, 
+                              loss='categorical_crossentropy', use_gpu=use_gpu)
 
         # Set up model checkpointing
         checkpoint = ModelCheckpoint(save_dir='./checkpoints', monitor='val_loss', save_best_only=True, save_freq=5)
 
-        # Callback functions 
+        # Callback functions
         lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
         early_stop = EarlyStopping(patience=3)
 
         # Train the model and capture history
-        # ann.fit(epochs=10000, learning_rate=0.01, lr_scheduler=lr_scheduler, early_stop=early_stop, 
-        #         X_val=X_val, y_val=y_val, checkpoint=checkpoint)
-        
-        ann.fit(epochs=1000, learning_rate=0.01, lr_scheduler=lr_scheduler, X_val=X_val, y_val=y_val)
+        ann.fit(epochs=1000, learning_rate=0.01, 
+                lr_scheduler=lr_scheduler, 
+                early_stop=early_stop, 
+                X_val=X_val, 
+                y_val=y_val, checkpoint=checkpoint)
 
         # Evaluate the model on the validation set
         y_pred_val = ann.predict(X_val)
         y_val_labels = np.argmax(y_val, axis=1)
 
         # Adjust prediction shape handling for accuracy calculation
-        if y_pred_val.ndim == 2:  
-            y_pred_val_labels = np.argmax(y_pred_val, axis=1)  # Multi-class classification
-        else:
-            y_pred_val_labels = (y_pred_val >= 0.5).astype(int)  # Binary classification (if applicable)
-
+        y_pred_val_labels = np.argmax(y_pred_val, axis=1)  # Multi-class classification
+        
         # Calculate and store the accuracy for this fold
         fold_accuracy = np.mean(y_pred_val_labels == y_val_labels)
         fold_accuracies.append(fold_accuracy)
         print(f"Fold {fold + 1} Accuracy: {fold_accuracy * 100:.2f}%")
-
-    # Print the average accuracy across all folds
-    average_accuracy = np.mean(fold_accuracies)
-    print(f"Average Accuracy across {k_folds} folds: {average_accuracy * 100:.2f}%")
 
     # Optionally plot training history of the last fold
     plot_utils = Plotting_Utils()  
