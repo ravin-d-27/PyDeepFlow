@@ -8,6 +8,7 @@ from .regularization import Regularization
 from .early_stopping import EarlyStopping
 from .cross_validator import CrossValidator
 from .batch_normalization import BatchNormalization
+from .gridSearch import GridSearchCV
 
 __all__ = [
     "activation",
@@ -23,4 +24,5 @@ __all__ = [
     "EarlyStopping",
     "CrossValidator",  
     "BatchNormalization",
+    "GridSearchCV",
 ]
