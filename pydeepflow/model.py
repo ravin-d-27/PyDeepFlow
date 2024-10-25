@@ -34,6 +34,10 @@ class Multi_Layer_ANN:
         self.weights = []
         self.biases = []
 
+        
+        if len(self.activations) != len(hidden_layers):
+            raise ValueError("The number of activation functions must match the number of hidden layers.")
+
         # Setup loss function
         self.loss = loss
         self.loss_func = get_loss_function(self.loss)
@@ -136,7 +140,7 @@ class Multi_Layer_ANN:
             # Apply L2 regularization to the weights
             self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
-    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=True, clipping_threshold=None):
+    def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=False, clipping_threshold=None):
         """
         Trains the model for a given number of epochs with an optional learning rate scheduler.
         """
@@ -163,6 +167,13 @@ class Multi_Layer_ANN:
             train_loss = self.loss_func(self.y_train, activations[-1], self.device)
             train_accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation == 'sigmoid' else np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
 
+            # Debugging output
+            print(f"Computed Train Loss: {train_loss}, Train Accuracy: {train_accuracy}")
+
+            if train_loss is None or train_accuracy is None:
+                print("Warning: train_loss or train_accuracy is None!")
+                continue  # Skip this epoch if values are not valid
+
             # Validation step
             val_loss = val_accuracy = None
             if X_val is not None and y_val is not None:
@@ -186,20 +197,20 @@ class Multi_Layer_ANN:
             if verbose:
                 epoch_time = time.time() - start_time
                 if epoch % 10 == 0:
-                    print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
-                          f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% Time: {epoch_time:.2f}s "
-                          f"Learning Rate: {current_lr:.6f}")
+                    print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss} Accuracy: {train_accuracy}% "
+                        f"Val Loss: {val_loss} Val Accuracy: {val_accuracy}% Time: {epoch_time}s "
+                        f"Learning Rate: {current_lr}")
 
             # Early stopping
             if early_stop: 
                 early_stop(val_loss)
                 if early_stop.early_stop:
                     print('\n', "#" * 150, '\n\n', "early stop at - "
-                          f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
-                          f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% "
-                          f"Learning Rate: {current_lr:.6f}", '\n\n', "#" * 150)
+                        f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss:.4f} Accuracy: {train_accuracy * 100:.2f}% "
+                        f"Val Loss: {val_loss:.4f} Val Accuracy: {val_accuracy * 100:.2f}% "
+                        f"Learning Rate: {current_lr:.6f}", '\n\n', "#" * 150)
                     break
-                
+                    
         print("Training Completed!")
 
     def predict(self, X):
