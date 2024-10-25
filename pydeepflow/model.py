@@ -9,6 +9,7 @@ from pydeepflow.cross_validator import CrossValidator
 from pydeepflow.batch_normalization import BatchNormalization
 from tqdm import tqdm
 import time
+import sys
 
 class Multi_Layer_ANN:
     """
@@ -167,8 +168,8 @@ class Multi_Layer_ANN:
             train_loss = self.loss_func(self.y_train, activations[-1], self.device)
             train_accuracy = np.mean((activations[-1] >= 0.5).astype(int) == self.y_train) if self.output_activation == 'sigmoid' else np.mean(np.argmax(activations[-1], axis=1) == np.argmax(self.y_train, axis=1))
 
-            # Debugging output
-            print(f"Computed Train Loss: {train_loss}, Train Accuracy: {train_accuracy}")
+            # # Debugging output
+            # print(f"Computed Train Loss: {train_loss}, Train Accuracy: {train_accuracy}")
 
             if train_loss is None or train_accuracy is None:
                 print("Warning: train_loss or train_accuracy is None!")
@@ -193,13 +194,17 @@ class Multi_Layer_ANN:
                 if checkpoint.should_save(epoch, val_loss):
                     checkpoint.save_weights(epoch, self.weights, self.biases, val_loss)
 
-            # Log training progress
-            if verbose:
-                epoch_time = time.time() - start_time
-                if epoch % 10 == 0:
-                    print(f"Epoch {epoch + 1}/{epochs} Train Loss: {train_loss} Accuracy: {train_accuracy}% "
-                        f"Val Loss: {val_loss} Val Accuracy: {val_accuracy}% Time: {epoch_time}s "
-                        f"Learning Rate: {current_lr}")
+            if verbose and (epoch % 10 == 0):
+        # Display progress on the same line
+                sys.stdout.write(
+                    f"\rEpoch {epoch + 1}/{epochs} | "
+                    f"Train Loss: {train_loss:.4f} | "
+                    f"Accuracy: {train_accuracy:.2f}% | "
+                    f"Val Loss: {val_loss:.4f} | "
+                    f"Val Accuracy: {val_accuracy:.2f}% | "
+                    f"Learning Rate: {current_lr:.6f}   "
+                )
+                sys.stdout.flush()
 
             # Early stopping
             if early_stop: 

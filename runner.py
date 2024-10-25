@@ -52,19 +52,15 @@ if __name__ == "__main__":
         ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, 
                               loss='categorical_crossentropy', use_gpu=use_gpu)
 
-        # Set up model checkpointing
-        checkpoint = ModelCheckpoint(save_dir='./checkpoints', monitor='val_loss', save_best_only=True, save_freq=5)
-
         # Callback functions
         lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
-        early_stop = EarlyStopping(patience=3)
 
         # Train the model and capture history
         ann.fit(epochs=1000, learning_rate=0.01, 
                 lr_scheduler=lr_scheduler, 
-                early_stop=early_stop, 
                 X_val=X_val, 
-                y_val=y_val, checkpoint=checkpoint)
+                y_val=y_val, 
+                verbose=True)
 
         # Evaluate the model on the validation set
         y_pred_val = ann.predict(X_val)
