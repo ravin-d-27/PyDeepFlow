@@ -75,5 +75,5 @@ if __name__ == "__main__":
         print(f"Fold {fold + 1} Accuracy: {fold_accuracy * 100:.2f}%")
 
     # Optionally plot training history of the last fold
-    plot_utils = Plotting_Utils()  
-    plot_utils.plot_training_history(ann.history)
+    # plot_utils = Plotting_Utils()  
+    # plot_utils.plot_training_history(ann.history)
