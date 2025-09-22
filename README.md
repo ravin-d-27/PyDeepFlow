@@ -1,32 +1,55 @@
-
----
-
 # **PyDeepFlow**
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/81f3e52a-ad5a-47b5-a7e1-bdc9ee2de508" alt="logo" width="300"/>
 </p>
 
-## **Author**
+<p align="center">
+  <a href="https://github.com/ravin-d-27/PyDeepFlow/stargazers">
+    <img src="https://img.shields.io/github/stars/ravin-d-27/PyDeepFlow?style=social" alt="GitHub stars"/>
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Open%20Source%20with%20Attribution-blue.svg" alt="License"/>
+  </a>
+  <a href="https://python.org">
+    <img src="https://img.shields.io/badge/Python-3.6%2B-blue.svg" alt="Python"/>
+  </a>
+</p>
 
-**Author Name**: Ravin D  
-**GitHub**: [ravin-d-27](https://github.com/ravin-d-27)  
-**Email**: ravin.d3107@outlook.com
-<br><br>
-The author is passionate about deep learning and is dedicated to creating tools that make neural networks more accessible to everyone.
+---
 
-## Contributors
+## **What is PyDeepFlow?**
+
+`pydeepflow` is a Python library designed for building and training deep learning models with an emphasis on **ease of use** and **flexibility**.  
+It abstracts many of the complexities found in traditional deep learning libraries while still offering **powerful functionality**.
+
+---
+
+## **Hacktoberfest 2025 with PyDeepFlow 💙**
+
+<p align="center">
+  <img src="assets/HF2025-EmailHeader.png" alt="Hacktoberfest" width="80%"/>
+</p>
+
+<p align="center">
+  Support open source software by participating in  
+  <a href="https://hacktoberfest.com"><b>Hacktoberfest</b></a> 🎉  
+  and get goodies and digital badges! 💙
+</p>
+
+---
+
+## **Contributors**
 
 Thanks to these amazing people for contributing to this project:
 
-<a href="https://github.com/ravin-d-27/PyDeepFlow/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ravin-d-27/PyDeepFlow" />
-</a>
+<p align="center">
+  <a href="https://github.com/ravin-d-27/PyDeepFlow/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=ravin-d-27/PyDeepFlow" alt="Contributors"/>
+  </a>
+</p>
 
 
-## **What is Pydeepflow?**
-
-`pydeepflow` is a Python library designed for building and training deep learning models with an emphasis on ease of use and flexibility. It abstracts many of the complexities found in traditional deep learning libraries while still offering powerful functionality. 
 
 ### **Key Features of Pydeepflow:**
 
@@ -145,5 +168,13 @@ Contributions are welcome! If you would like to contribute to `pydeepflow`, foll
 - **Deep Learning Resources**: For more about deep learning, consider the following:
   - Goodfellow, Ian, et al. *Deep Learning*. MIT Press, 2016.
   - Chollet, François. *Deep Learning with Python*. Manning Publications, 2017.
+
+## **Author**
+
+**Author Name**: Ravin D  
+**GitHub**: [ravin-d-27](https://github.com/ravin-d-27)  
+**Email**: ravin.d3107@outlook.com
+<br><br>
+The author is passionate about deep learning and is dedicated to creating tools that make neural networks more accessible to everyone.
 
 ---
