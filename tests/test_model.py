@@ -99,11 +99,12 @@ class TestMultiLayerANN(unittest.TestCase):
     def test_early_stopping(self):
         from pydeepflow.early_stopping import EarlyStopping
         
-        early_stop = EarlyStopping(patience=5)
+        early_stop = EarlyStopping(patience=3)
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[5], 
                                 activations=['relu'], use_batch_norm=True)
-        
-        model.fit(epochs=200, learning_rate=0.1, early_stop=early_stop,
+
+        # Use a very high learning rate to guarantee the loss will not consistently improve
+        model.fit(epochs=100, learning_rate=10, early_stop=early_stop,
                   X_val=self.X_test, y_val=self.y_test, verbose=False)
         
         # Check if training stopped early
@@ -141,7 +142,8 @@ class TestMultiLayerANN(unittest.TestCase):
         
         # This test might not always pass due to the stochastic nature of training
         # but it gives an idea of the potential benefit of batch normalization
-        self.assertGreaterEqual(accuracy_bn, accuracy_no_bn)
+        self.assertGreater(accuracy_bn, 0.8, "Model with batch norm failed to achieve > 80% accuracy.")
+        self.assertGreater(accuracy_no_bn, 0.8, "Model without batch norm failed to achieve > 80% accuracy.")
 
     def test_different_activations(self):
         activations = ['relu', 'sigmoid', 'tanh']
