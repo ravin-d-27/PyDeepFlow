@@ -103,7 +103,7 @@ class TestMultiLayerANN(unittest.TestCase):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[5], 
                                 activations=['relu'], use_batch_norm=True)
         
-        model.fit(epochs=100, learning_rate=0.01, early_stop=early_stop, 
+        model.fit(epochs=200, learning_rate=0.1, early_stop=early_stop,
                   X_val=self.X_test, y_val=self.y_test, verbose=False)
         
         # Check if training stopped early
@@ -218,5 +218,19 @@ class TestMultiLayerANN(unittest.TestCase):
         self.assertGreaterEqual(accuracy_clip, 0.8)
         self.assertGreaterEqual(accuracy_no_clip, 0.8)
     
+    def test_adam_optimizer(self):
+        model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10, 10],
+                                activations=['relu', 'relu'], use_batch_norm=True, optimizer='adam')
+        model.fit(epochs=200, learning_rate=0.005, verbose=False)
+        loss, accuracy = model.evaluate(self.X_test, self.y_test)
+        self.assertGreater(accuracy, 0.8)
+
+    def test_rmsprop_optimizer(self):
+        model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10, 10],
+                                activations=['relu', 'relu'], use_batch_norm=True, optimizer='rmsprop')
+        model.fit(epochs=200, learning_rate=0.001, verbose=False)
+        loss, accuracy = model.evaluate(self.X_test, self.y_test)
+        self.assertGreater(accuracy, 0.8)
+
 if __name__ == '__main__':
     unittest.main()
