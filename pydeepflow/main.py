@@ -6,6 +6,24 @@ from pydeepflow.model import Multi_Layer_ANN
 from pydeepflow.cross_validator import CrossValidator  # Import CrossValidator
 
 def load_and_preprocess_data(url):
+    """
+    Loads the Iris dataset from a URL, preprocesses it, and prepares it for training.
+
+    This function performs the following steps:
+    1. Loads the data from the provided URL using pandas.
+    2. Encodes the categorical species labels into numerical format.
+    3. Separates the features (X) from the labels (y).
+    4. Converts the numerical labels to a one-hot encoded format.
+    5. Standardizes the features using StandardScaler to have a mean of 0 and a variance of 1.
+
+    Args:
+        url (str): The URL to the Iris dataset (or a local file path).
+
+    Returns:
+        tuple: A tuple containing:
+            - X (np.ndarray): The standardized and preprocessed feature data.
+            - y_one_hot (np.ndarray): The one-hot encoded labels.
+    """
     # Load the Iris dataset
     df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
     print(df.head())
@@ -27,6 +45,18 @@ def load_and_preprocess_data(url):
     return X, y_one_hot
 
 if __name__ == "__main__":
+    """
+    Main execution block to train and evaluate the neural network on the Iris dataset.
+
+    This script serves as an example of how to use the Multi_Layer_ANN class. It includes:
+    - Configuration for the dataset URL and cross-validation folds.
+    - Loading and preprocessing of the Iris dataset.
+    - User input to decide whether to use a GPU for computation.
+    - Definition of the neural network architecture (hidden layers and activation functions).
+    - Initialization of the Multi_Layer_ANN model.
+    - K-fold cross-validation to evaluate the model's performance.
+    - Printing the cross-validation results.
+    """
     # Configuration
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     n_splits = 5  # Number of folds for cross-validation
