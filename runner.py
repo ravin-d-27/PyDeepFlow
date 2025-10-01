@@ -4,6 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from pydeepflow.model import Multi_Layer_ANN
+from pydeepflow.optimizers import Adam, RMSprop
 from pydeepflow.early_stopping import EarlyStopping
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.learning_rate_scheduler import LearningRateScheduler
@@ -41,6 +42,15 @@ if __name__ == "__main__":
 
     # Perform k-fold cross-validation
     fold_accuracies = []  # To store accuracy for each fold
+    optimizer_choice = input("Choose optimizer (sgd, adam, rmsprop): ").lower()
+
+    if optimizer_choice == 'adam':
+        optimizer = Adam()
+    elif optimizer_choice == 'rmsprop':
+        optimizer = RMSprop()
+    else:
+        optimizer = None  # Default to SGD
+
     for fold, (train_index, val_index) in enumerate(cross_validator.split(X, y_one_hot)):
         print(f"Training on fold {fold + 1}/{k_folds}")
 
@@ -49,8 +59,8 @@ if __name__ == "__main__":
         y_train, y_val = y_one_hot[train_index], y_one_hot[val_index]
 
         # Initialize the ANN for each fold without batch normalization
-        ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, 
-                              loss='categorical_crossentropy', use_gpu=use_gpu)
+        ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations,
+                              loss='categorical_crossentropy', use_gpu=use_gpu, optimizer=optimizer)
 
         # Callback functions
         lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")

@@ -8,6 +8,7 @@ from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.cross_validator import CrossValidator
 from pydeepflow.batch_normalization import BatchNormalization
 from tqdm import tqdm
+from pydeepflow.optimizers import Adam, RMSprop
 import time
 import sys
 
@@ -41,7 +42,7 @@ class Multi_Layer_ANN:
         batch_norm_layers (list): A list of BatchNormalization layers.
     """
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
-                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False):
+                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd'):
         """
         Initializes the Multi_Layer_ANN.
 
@@ -107,6 +108,14 @@ class Multi_Layer_ANN:
         if self.use_batch_norm:
             for i in range(len(self.layers) - 2):  # Exclude input and output layers
                 self.batch_norm_layers.append(BatchNormalization(self.layers[i+1], device=self.device))
+
+        # Optimizer setup
+        if optimizer == 'adam':
+            self.optimizer = Adam()
+        elif optimizer == 'rmsprop':
+            self.optimizer = RMSprop()
+        else:
+            self.optimizer = None  # Default to SGD
 
     def forward_propagation(self, X):
         """
@@ -190,11 +199,17 @@ class Multi_Layer_ANN:
             gradient['weights'].append(grad_weights)
             gradient['biases'].append(grad_biases)
 
-        for i in range(len(self.weights)):
-            self.weights[i] -= gradient['weights'][i] * learning_rate
-            self.biases[i] -= gradient['biases'][i] * learning_rate
+        if self.optimizer:
+            params = self.weights + self.biases
+            grads = gradient['weights'] + gradient['biases']
+            self.optimizer.update(params, grads)
+        else:
+            for i in range(len(self.weights)):
+                self.weights[i] -= gradient['weights'][i] * learning_rate
+                self.biases[i] -= gradient['biases'][i] * learning_rate
 
-            # Apply L2 regularization to the weights
+        # Apply L2 regularization to the weights
+        for i in range(len(self.weights)):
             self.weights[i] -= learning_rate * self.regularization.apply_l2_regularization(self.weights[i], learning_rate, X.shape)
 
     def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=False, clipping_threshold=None):
