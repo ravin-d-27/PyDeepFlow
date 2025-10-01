@@ -26,16 +26,16 @@ class TestMultiLayerANN(unittest.TestCase):
                                 activations=['relu', 'relu'], use_batch_norm=True)
         model.fit(epochs=50, learning_rate=0.01, verbose=False)
         
-        loss, accuracy = model.evaluate(self.X_test, self.y_test)
-        self.assertGreater(accuracy, 0.8)  # Adjust threshold as needed
+        results = model.evaluate(self.X_test, self.y_test)
+        self.assertGreater(results['accuracy'], 0.8)
 
     def test_model_without_batch_norm(self):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10, 10], 
                                 activations=['relu', 'relu'], use_batch_norm=False)
         model.fit(epochs=50, learning_rate=0.01, verbose=False)
         
-        loss, accuracy = model.evaluate(self.X_test, self.y_test)
-        self.assertGreater(accuracy, 0.8)  # Adjust threshold as needed
+        results = model.evaluate(self.X_test, self.y_test)
+        self.assertGreater(results['accuracy'], 0.8)
 
     def test_forward_propagation(self):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[5], 
@@ -136,12 +136,12 @@ class TestMultiLayerANN(unittest.TestCase):
         model_no_bn.fit(epochs=50, learning_rate=0.01, verbose=False)
         
         # Compare performance
-        _, accuracy_bn = model_bn.evaluate(self.X_test, self.y_test)
-        _, accuracy_no_bn = model_no_bn.evaluate(self.X_test, self.y_test)
+        results_bn = model_bn.evaluate(self.X_test, self.y_test)
+        results_no_bn = model_no_bn.evaluate(self.X_test, self.y_test)
         
         # This test might not always pass due to the stochastic nature of training
         # but it gives an idea of the potential benefit of batch normalization
-        self.assertGreaterEqual(accuracy_bn, accuracy_no_bn)
+        self.assertGreaterEqual(results_bn['accuracy'], results_no_bn['accuracy'])
 
     def test_different_activations(self):
         activations = ['relu', 'sigmoid', 'tanh']
@@ -149,8 +149,8 @@ class TestMultiLayerANN(unittest.TestCase):
             model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10], 
                                     activations=[activation], use_batch_norm=True)
             model.fit(epochs=50, learning_rate=0.01, verbose=False)
-            _, accuracy = model.evaluate(self.X_test, self.y_test)
-            self.assertGreater(accuracy, 0.8, f"Model with {activation} activation failed")
+            results = model.evaluate(self.X_test, self.y_test)
+            self.assertGreater(results['accuracy'], 0.8, f"Model with {activation} activation failed")
 
     def test_model_history(self):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10], 
@@ -175,11 +175,11 @@ class TestMultiLayerANN(unittest.TestCase):
         model_no_reg.fit(epochs=50, learning_rate=0.01, verbose=False)
         
         # Compare performance on test set
-        _, accuracy_reg = model_reg.evaluate(self.X_test, self.y_test)
-        _, accuracy_no_reg = model_no_reg.evaluate(self.X_test, self.y_test)
+        results_reg = model_reg.evaluate(self.X_test, self.y_test)
+        results_no_reg = model_no_reg.evaluate(self.X_test, self.y_test)
         
         # Regularized model should generalize better (though this might not always be true)
-        self.assertGreaterEqual(accuracy_reg, accuracy_no_reg)
+        self.assertGreaterEqual(results_reg['accuracy'], results_no_reg['accuracy'])
 
     def test_dropout(self):
         model_dropout = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
@@ -192,13 +192,13 @@ class TestMultiLayerANN(unittest.TestCase):
         model_no_dropout.fit(epochs=50, learning_rate=0.01, verbose=False)
         
         # Compare performance on test set
-        _, accuracy_dropout = model_dropout.evaluate(self.X_test, self.y_test)
-        _, accuracy_no_dropout = model_no_dropout.evaluate(self.X_test, self.y_test)
+        results_dropout = model_dropout.evaluate(self.X_test, self.y_test)
+        results_no_dropout = model_no_dropout.evaluate(self.X_test, self.y_test)
         
         # Dropout should help with generalization, but due to the stochastic nature,
         # this test might not always pass. It's more of a sanity check.
-        self.assertGreaterEqual(accuracy_dropout, 0.8)
-        self.assertGreaterEqual(accuracy_no_dropout, 0.8)
+        self.assertGreaterEqual(results_dropout['accuracy'], 0.8)
+        self.assertGreaterEqual(results_no_dropout['accuracy'], 0.8)
 
     def test_gradient_clipping(self):
         # Model with gradient clipping
@@ -212,25 +212,25 @@ class TestMultiLayerANN(unittest.TestCase):
         model_no_clip.fit(epochs=50, learning_rate=0.01, verbose=False)
         
         # Both models should converge, but the clipped model might be more stable
-        _, accuracy_clip = model_clip.evaluate(self.X_test, self.y_test)
-        _, accuracy_no_clip = model_no_clip.evaluate(self.X_test, self.y_test)
+        results_clip = model_clip.evaluate(self.X_test, self.y_test)
+        results_no_clip = model_no_clip.evaluate(self.X_test, self.y_test)
         
-        self.assertGreaterEqual(accuracy_clip, 0.8)
-        self.assertGreaterEqual(accuracy_no_clip, 0.8)
+        self.assertGreaterEqual(results_clip['accuracy'], 0.8)
+        self.assertGreaterEqual(results_no_clip['accuracy'], 0.8)
     
     def test_adam_optimizer(self):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10, 10],
                                 activations=['relu', 'relu'], use_batch_norm=True, optimizer='adam')
         model.fit(epochs=200, learning_rate=0.005, verbose=False)
-        loss, accuracy = model.evaluate(self.X_test, self.y_test)
-        self.assertGreater(accuracy, 0.8)
+        results = model.evaluate(self.X_test, self.y_test)
+        self.assertGreater(results['accuracy'], 0.8)
 
     def test_rmsprop_optimizer(self):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10, 10],
                                 activations=['relu', 'relu'], use_batch_norm=True, optimizer='rmsprop')
         model.fit(epochs=200, learning_rate=0.001, verbose=False)
-        loss, accuracy = model.evaluate(self.X_test, self.y_test)
-        self.assertGreater(accuracy, 0.8)
+        results = model.evaluate(self.X_test, self.y_test)
+        self.assertGreater(results['accuracy'], 0.8)
 
 if __name__ == '__main__':
     unittest.main()

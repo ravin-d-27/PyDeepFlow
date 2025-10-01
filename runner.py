@@ -73,16 +73,19 @@ if __name__ == "__main__":
                 verbose=True)
 
         # Evaluate the model on the validation set
-        y_pred_val = ann.predict(X_val)
-        y_val_labels = np.argmax(y_val, axis=1)
-
-        # Adjust prediction shape handling for accuracy calculation
-        y_pred_val_labels = np.argmax(y_pred_val, axis=1)  # Multi-class classification
+        # Evaluate the model on the validation set
+        metrics_to_eval = ['loss', 'accuracy', 'precision', 'recall', 'f1_score', 'confusion_matrix']
+        results = ann.evaluate(X_val, y_val, metrics=metrics_to_eval)
         
-        # Calculate and store the accuracy for this fold
-        fold_accuracy = np.mean(y_pred_val_labels == y_val_labels)
-        fold_accuracies.append(fold_accuracy)
-        print(f"Fold {fold + 1} Accuracy: {fold_accuracy * 100:.2f}%")
+        fold_accuracies.append(results['accuracy'])
+        
+        print(f"Fold {fold + 1} Metrics:")
+        for metric_name, metric_value in results.items():
+            if metric_name == 'confusion_matrix':
+                print(f"  {metric_name.capitalize()}:")
+                print(metric_value)
+            else:
+                print(f"  {metric_name.capitalize()}: {metric_value:.4f}")
 
     # Optionally plot training history of the last fold
     # plot_utils = Plotting_Utils()  
