@@ -48,12 +48,12 @@ class GridSearchCV:
                 model = self.model_class(X_train, y_train, **params_dict)
                 model.fit(epochs=10)
                 
-                val_loss, val_accuracy = model.evaluate(X_val, y_val)
+                results = model.evaluate(X_val, y_val, metrics=[self.scoring])
                 
                 if self.scoring == 'accuracy':
-                    fold_scores.append(val_accuracy)
+                    fold_scores.append(results['accuracy'])
                 elif self.scoring == 'loss':
-                    fold_scores.append(-val_loss)  # Assuming lower loss is better
+                    fold_scores.append(-results['loss'])  # Assuming lower loss is better
 
             avg_score = np.mean(fold_scores)
             print(f"Average score for parameters {params_dict}: {avg_score:.4f}")

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pydeepflow.activations import activation, activation_derivative
 from pydeepflow.losses import get_loss_function, get_loss_derivative
+from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix
 from pydeepflow.device import Device
 from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
@@ -316,21 +317,44 @@ class Multi_Layer_ANN:
         activations, _ = self.forward_propagation(X)
         return activations[-1]
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, metrics=['loss', 'accuracy']):
         """
         Evaluates the model's performance on a given dataset.
 
         Args:
             X (np.ndarray): The input features for evaluation.
             y (np.ndarray): The true labels for evaluation.
+            metrics (list): A list of metrics to calculate.
 
         Returns:
-            tuple: A tuple containing the loss and accuracy of the model on the given data.
+            dict: A dictionary containing the calculated metrics.
         """
         predictions = self.predict(X)
-        loss = self.loss_func(y, predictions, self.device)
-        accuracy = np.mean((predictions >= 0.5).astype(int) == y) if self.output_activation == 'sigmoid' else np.mean(np.argmax(predictions, axis=1) == np.argmax(y, axis=1))
-        return loss, accuracy
+        results = {}
+
+        if 'loss' in metrics:
+            results['loss'] = self.loss_func(y, predictions, self.device)
+
+        y_pred_classes = (predictions >= 0.5).astype(int) if self.output_activation == 'sigmoid' else np.argmax(predictions, axis=1)
+        y_true_classes = y if self.output_activation == 'sigmoid' else np.argmax(y, axis=1)
+
+        if 'accuracy' in metrics:
+            results['accuracy'] = np.mean(y_pred_classes == y_true_classes)
+        
+        if 'precision' in metrics:
+            results['precision'] = precision_score(y_true_classes, y_pred_classes)
+
+        if 'recall' in metrics:
+            results['recall'] = recall_score(y_true_classes, y_pred_classes)
+
+        if 'f1_score' in metrics:
+            results['f1_score'] = f1_score(y_true_classes, y_pred_classes)
+        
+        if 'confusion_matrix' in metrics:
+            num_classes = self.layers[-1]
+            results['confusion_matrix'] = confusion_matrix(y_true_classes, y_pred_classes, num_classes)
+
+        return results
 
     def load_checkpoint(self, checkpoint_path):
         """
@@ -399,26 +423,56 @@ class Plotting_Utils:
                                        Defaults to ('loss', 'accuracy').
             figure (str, optional): The filename to save the plot to. Defaults to 'history.png'.
         """
-        epochs = len(history['train_loss'])
-        fig, ax = plt.subplots(1, len(metrics), figsize=(12, 5))
+        num_metrics = len(metrics)
+        fig, ax = plt.subplots(1, num_metrics, figsize=(6 * num_metrics, 5))
+        
+        if num_metrics == 1:
+            ax = [ax]
 
-        if 'loss' in metrics:
-            ax[0].plot(range(epochs), history['train_loss'], label='Train Loss')
-            if 'val_loss' in history:
-                ax[0].plot(range(epochs), history['val_loss'], label='Validation Loss')
-            ax[0].set_title("Loss over Epochs")
-            ax[0].set_xlabel("Epochs")
-            ax[0].set_ylabel("Loss")
-            ax[0].legend()
+        for i, metric in enumerate(metrics):
+            ax[i].plot(history[f'train_{metric}'], label=f'Train {metric.capitalize()}')
+            if f'val_{metric}' in history:
+                ax[i].plot(history[f'val_{metric}'], label=f'Validation {metric.capitalize()}')
+            ax[i].set_title(f"{metric.capitalize()} over Epochs")
+            ax[i].set_xlabel("Epochs")
+            ax[i].set_ylabel(metric.capitalize())
+            ax[i].legend()
 
-        if 'accuracy' in metrics:
-            ax[1].plot(range(epochs), history['train_accuracy'], label='Train Accuracy')
-            if 'val_accuracy' in history:
-                ax[1].plot(range(epochs), history['val_accuracy'], label='Validation Accuracy')
-            ax[1].set_title("Accuracy over Epochs")
-            ax[1].set_xlabel("Epochs")
-            ax[1].set_ylabel("Accuracy")
-            ax[1].legend()
         plt.savefig(figure)
         plt.tight_layout()
+        plt.show()
+
+    def plot_learning_curve(self, train_sizes, train_scores, val_scores, figure='learning_curve.png'):
+        """
+        Plots the learning curve.
+
+        Args:
+            train_sizes (list): The number of training examples used.
+            train_scores (list): The scores on the training set.
+            val_scores (list): The scores on the validation set.
+            figure (str, optional): The filename to save the plot to. Defaults to 'learning_curve.png'.
+        """
+        train_scores_mean = np.mean(train_scores, axis=1)
+        train_scores_std = np.std(train_scores, axis=1)
+        val_scores_mean = np.mean(val_scores, axis=1)
+        val_scores_std = np.std(val_scores, axis=1)
+
+        plt.figure()
+        plt.title("Learning Curve")
+        plt.xlabel("Training examples")
+        plt.ylabel("Score")
+        plt.grid()
+
+        plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                         train_scores_mean + train_scores_std, alpha=0.1,
+                         color="r")
+        plt.fill_between(train_sizes, val_scores_mean - val_scores_std,
+                         val_scores_mean + val_scores_std, alpha=0.1, color="g")
+        plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+                 label="Training score")
+        plt.plot(train_sizes, val_scores_mean, 'o-', color="g",
+                 label="Cross-validation score")
+
+        plt.legend(loc="best")
+        plt.savefig(figure)
         plt.show()
