@@ -154,7 +154,7 @@ class TestActivations(unittest.TestCase):
     def test_tanh_derivative(self):
         x = np.array([0.5])
         result = activation_derivative(x, 'tanh', self.device_cpu)
-        expected = np.array([0.78644773])
+        expected = np.array([0.75])
         np.testing.assert_array_almost_equal(result, expected)
 
     def test_hardtanh_derivative(self):

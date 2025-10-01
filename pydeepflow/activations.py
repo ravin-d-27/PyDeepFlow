@@ -1,3 +1,5 @@
+import numpy as np
+
 def activation(x, func, device, alpha=0.01):
     """
     Applies the specified activation function to the input data.
@@ -59,7 +61,7 @@ def activation(x, func, device, alpha=0.01):
     elif func == 'elu':
         return device.where(x > 0, x, alpha * (device.exp(x) - 1))
     elif func == 'gelu':
-        return 0.5 * x * (1 + device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x ** 3)))
+        return 0.5 * x * (1 + device.tanh(device.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3))) 
     elif func == 'swish':
         return x / (1 + device.exp(-x))
     elif func == 'selu':
