@@ -13,12 +13,51 @@ import sys
 
 class Multi_Layer_ANN:
     """
-    A Multi-Layer Artificial Neural Network (ANN) class for binary and multi-class classification tasks.
+    A Multi-Layer Artificial Neural Network (ANN) for classification tasks.
+
+    This class implements a multi-layer feedforward neural network that can be used for both
+    binary and multi-class classification problems. It supports various features such as
+    customizable hidden layers, activation functions, loss functions, GPU acceleration,
+    L2 regularization, dropout, and batch normalization.
+
+    Attributes:
+        device (Device): An object to manage computation on either CPU or GPU.
+        regularization (Regularization): An object to handle L2 and dropout regularization.
+        layers (list): A list of integers defining the number of neurons in each layer,
+                       including the input and output layers.
+        output_activation (str): The activation function for the output layer ('sigmoid' for binary
+                                 classification, 'softmax' for multi-class).
+        activations (list): A list of activation functions for the hidden layers.
+        weights (list): A list of weight matrices for each layer.
+        biases (list): A list of bias vectors for each layer.
+        loss (str): The name of the loss function.
+        loss_func (function): The loss function.
+        loss_derivative (function): The derivative of the loss function.
+        X_train (array): The training data features.
+        y_train (array): The training data labels.
+        training (bool): A flag indicating whether the model is in training or inference mode.
+        history (dict): A dictionary to store training and validation metrics over epochs.
+        use_batch_norm (bool): A flag to enable or disable batch normalization.
+        batch_norm_layers (list): A list of BatchNormalization layers.
     """
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
                  use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False):
         """
-        Initializes the ANN model with the provided architecture and configurations.
+        Initializes the Multi_Layer_ANN.
+
+        Args:
+            X_train (np.ndarray): The training input data.
+            Y_train (np.ndarray): The training target data.
+            hidden_layers (list): A list of integers specifying the number of neurons in each hidden layer.
+            activations (list): A list of strings specifying the activation function for each hidden layer.
+            loss (str, optional): The loss function to use. Defaults to 'categorical_crossentropy'.
+            use_gpu (bool, optional): If True, computations will be performed on the GPU. Defaults to False.
+            l2_lambda (float, optional): The L2 regularization parameter. Defaults to 0.0.
+            dropout_rate (float, optional): The dropout rate for regularization. Defaults to 0.0.
+            use_batch_norm (bool, optional): If True, batch normalization will be applied. Defaults to False.
+
+        Raises:
+            ValueError: If the number of activation functions does not match the number of hidden layers.
         """
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
@@ -72,6 +111,14 @@ class Multi_Layer_ANN:
     def forward_propagation(self, X):
         """
         Performs forward propagation through the network.
+
+        Args:
+            X (np.ndarray): The input data.
+
+        Returns:
+            tuple: A tuple containing:
+                - activations (list): A list of activation values for each layer.
+                - Z_values (list): A list of the pre-activation (linear) values for each layer.
         """
         activations = [X]
         Z_values = []
@@ -96,7 +143,16 @@ class Multi_Layer_ANN:
 
     def backpropagation(self, X, y, activations, Z_values, learning_rate, clip_value=None):
         """
-        Performs backpropagation through the network to compute weight updates.
+        Performs backpropagation to compute gradients and update model weights and biases.
+
+        Args:
+            X (np.ndarray): The input data for the current batch.
+            y (np.ndarray): The true labels for the current batch.
+            activations (list): The list of activations from the forward pass.
+            Z_values (list): The list of pre-activation values from the forward pass.
+            learning_rate (float): The learning rate for weight updates.
+            clip_value (float, optional): The value to clip gradients to, preventing exploding gradients.
+                                          Defaults to None.
         """
         # Calculate the error in the output layer
         output_error = activations[-1] - y
@@ -143,7 +199,21 @@ class Multi_Layer_ANN:
 
     def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=False, clipping_threshold=None):
         """
-        Trains the model for a given number of epochs with an optional learning rate scheduler.
+        Trains the neural network model.
+
+        Args:
+            epochs (int): The number of epochs to train the model.
+            learning_rate (float, optional): The learning rate for the optimizer. Defaults to 0.01.
+            lr_scheduler (object, optional): A learning rate scheduler. Defaults to None.
+            early_stop (object, optional): An early stopping callback. Defaults to None.
+            X_val (np.ndarray, optional): Validation features. Defaults to None.
+            y_val (np.ndarray, optional): Validation labels. Defaults to None.
+            checkpoint (object, optional): A model checkpointing callback. Defaults to None.
+            verbose (bool, optional): If True, prints training progress. Defaults to False.
+            clipping_threshold (float, optional): The value for gradient clipping. Defaults to None.
+
+        Raises:
+            AssertionError: If early stopping is enabled but no validation set is provided.
         """
         if early_stop:
             assert X_val is not None and y_val is not None, "Validation set is required for early stopping"
@@ -220,14 +290,27 @@ class Multi_Layer_ANN:
 
     def predict(self, X):
         """
-        Predicts the output for given input data X.
+        Makes predictions on new data.
+
+        Args:
+            X (np.ndarray): The input data for which to make predictions.
+
+        Returns:
+            np.ndarray: The predicted probabilities or class labels.
         """
         activations, _ = self.forward_propagation(X)
         return activations[-1]
 
     def evaluate(self, X, y):
         """
-        Evaluates the model on a given test set.
+        Evaluates the model's performance on a given dataset.
+
+        Args:
+            X (np.ndarray): The input features for evaluation.
+            y (np.ndarray): The true labels for evaluation.
+
+        Returns:
+            tuple: A tuple containing the loss and accuracy of the model on the given data.
         """
         predictions = self.predict(X)
         loss = self.loss_func(y, predictions, self.device)
@@ -236,7 +319,10 @@ class Multi_Layer_ANN:
 
     def load_checkpoint(self, checkpoint_path):
         """
-        Loads model weights from a checkpoint.
+        Loads model weights and biases from a checkpoint file.
+
+        Args:
+            checkpoint_path (str): The path to the checkpoint file.
         """
         print(f"Loading model weights from {checkpoint_path}")
         checkpoint = ModelCheckpoint(checkpoint_path)
@@ -244,7 +330,12 @@ class Multi_Layer_ANN:
 
     def save_model(self, file_path):
         """
-        Saves the model weights and biases to a file.
+        Saves the entire model to a file.
+
+        This includes weights, biases, layer architecture, and activation functions.
+
+        Args:
+            file_path (str): The path to the file where the model will be saved.
         """
         model_data = {
             'weights': [w.tolist() for w in self.weights],
@@ -258,7 +349,12 @@ class Multi_Layer_ANN:
 
     def load_model(self, file_path):
         """
-        Loads the model weights and biases from a file.
+        Loads a model from a file.
+
+        This restores the weights, biases, layer architecture, and activation functions.
+
+        Args:
+            file_path (str): The path to the file from which to load the model.
         """
         model_data = np.load(file_path, allow_pickle=True).item()
         self.weights = [self.device.array(w) for w in model_data['weights']]
@@ -271,15 +367,22 @@ class Multi_Layer_ANN:
 
 class Plotting_Utils:
     """
-    Utility class for plotting training and validation metrics.
+    A utility class for plotting model training history.
+
+    This class provides methods to visualize metrics such as loss and accuracy
+    over the course of training, which is useful for diagnosing issues like
+    overfitting or underfitting.
     """
     def plot_training_history(self, history, metrics=('loss', 'accuracy'), figure='history.png'):
         """
-        Plots the training and validation loss/accuracy over epochs.
-        Parameters:
-            history (dict): A dictionary containing training history with keys 'train_loss', 'val_loss', 
-                            'train_accuracy', and 'val_accuracy'.
-            metrics (tuple): The metrics to plot ('loss' or 'accuracy').
+        Plots the training and validation history for specified metrics.
+
+        Args:
+            history (dict): A dictionary containing the training history.
+                            Expected keys are 'train_loss', 'val_loss', 'train_accuracy', 'val_accuracy'.
+            metrics (tuple, optional): A tuple of metrics to plot, e.g., ('loss', 'accuracy').
+                                       Defaults to ('loss', 'accuracy').
+            figure (str, optional): The filename to save the plot to. Defaults to 'history.png'.
         """
         epochs = len(history['train_loss'])
         fig, ax = plt.subplots(1, len(metrics), figsize=(12, 5))
