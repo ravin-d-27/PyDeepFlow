@@ -91,6 +91,22 @@ class Device:
         """
         return cp.random if self.use_gpu else np.random
 
+    def sign(self, x):
+        """
+        Computes the sign of each element in the input array.
+
+        Parameters:
+        -----------
+        x : np.ndarray or cp.ndarray
+            The input array.
+
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            The sign of each element in `x`.
+        """
+        return cp.sign(x) if self.use_gpu else np.sign(x)
+
     def exp(self, x):
         """
         Computes the element-wise exponential of the input array.

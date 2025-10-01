@@ -1,6 +1,6 @@
 import numpy as np
-from sklearn.model_selection import train_test_split
 from itertools import product
+from pydeepflow.cross_validator import CrossValidator
 
 class GridSearchCV:
     def __init__(self, model_class, param_grid, scoring='accuracy', cv=3):
@@ -33,29 +33,29 @@ class GridSearchCV:
         param_values = [self.param_grid[name] for name in param_names]
         param_combinations = list(product(*param_values))
 
+        cross_validator = CrossValidator(n_splits=self.cv)
+
         for params in param_combinations:
             params_dict = dict(zip(param_names, params))
             print(f"Testing parameters: {params_dict}")
             
-            # Perform cross-validation
-            scores = []
-            for _ in range(self.cv):
-                X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=None)
+            fold_scores = []
+            # Iterating over the pre-defined folds
+            for train_index, val_index in cross_validator.split(X, y):
+                X_train, X_val = X[train_index], X[val_index]
+                y_train, y_val = y[train_index], y[val_index]
                 
-                # Initialize model with current parameters
                 model = self.model_class(X_train, y_train, **params_dict)
-                model.fit(epochs=10)  # Adjust epochs as needed
+                model.fit(epochs=10)
                 
-                # Evaluate the model
                 val_loss, val_accuracy = model.evaluate(X_val, y_val)
                 
-                # Store the score based on the scoring metric
                 if self.scoring == 'accuracy':
-                    scores.append(val_accuracy)
+                    fold_scores.append(val_accuracy)
                 elif self.scoring == 'loss':
-                    scores.append(-val_loss)  # Assuming lower loss is better
+                    fold_scores.append(-val_loss)  # Assuming lower loss is better
 
-            avg_score = np.mean(scores)
+            avg_score = np.mean(fold_scores)
             print(f"Average score for parameters {params_dict}: {avg_score:.4f}")
             print()
             

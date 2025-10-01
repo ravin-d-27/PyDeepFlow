@@ -21,7 +21,6 @@ class TestMultiLayerANN(unittest.TestCase):
         # One-hot encode the labels
         self.y_train = np.eye(3)[self.y_train]
         self.y_test = np.eye(3)[self.y_test]
-
     def test_model_with_batch_norm(self):
         model = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[10, 10], 
                                 activations=['relu', 'relu'], use_batch_norm=True)
@@ -126,10 +125,10 @@ class TestMultiLayerANN(unittest.TestCase):
         checkpoint_files = os.listdir('./checkpoints')
         self.assertTrue(len(checkpoint_files) > 0)
 
-        def test_batch_norm_effect(self):
-            model_bn = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
-                                   activations=['relu', 'relu'], use_batch_norm=True)
-            model_bn.fit(epochs=50, learning_rate=0.01, verbose=False)
+    def test_batch_norm_effect(self):
+        model_bn = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
+                                activations=['relu', 'relu'], use_batch_norm=True)
+        model_bn.fit(epochs=50, learning_rate=0.01, verbose=False)
         
         # Model without batch norm
         model_no_bn = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
@@ -182,10 +181,10 @@ class TestMultiLayerANN(unittest.TestCase):
         # Regularized model should generalize better (though this might not always be true)
         self.assertGreaterEqual(accuracy_reg, accuracy_no_reg)
 
-        def test_dropout(self):
-            model_dropout = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
-                                        activations=['relu', 'relu'], use_batch_norm=True, dropout_rate=0.5)
-            model_dropout.fit(epochs=50, learning_rate=0.01, verbose=False)
+    def test_dropout(self):
+        model_dropout = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
+                                    activations=['relu', 'relu'], use_batch_norm=True, dropout_rate=0.5)
+        model_dropout.fit(epochs=50, learning_rate=0.01, verbose=False)
         
         # Model without dropout
         model_no_dropout = Multi_Layer_ANN(self.X_train, self.y_train, hidden_layers=[20, 20], 
