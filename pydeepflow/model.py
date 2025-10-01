@@ -321,13 +321,18 @@ class Multi_Layer_ANN:
         """
         Evaluates the model's performance on a given dataset.
 
+        This method computes various performance metrics to assess the model's accuracy and effectiveness.
+        It can calculate loss, accuracy, precision, recall, F1-score, and a confusion matrix.
+
         Args:
             X (np.ndarray): The input features for evaluation.
             y (np.ndarray): The true labels for evaluation.
-            metrics (list): A list of metrics to calculate.
+            metrics (list, optional): A list of metrics to calculate.
+                                      Defaults to ['loss', 'accuracy'].
+                                      Available metrics: 'loss', 'accuracy', 'precision', 'recall', 'f1_score', 'confusion_matrix'.
 
         Returns:
-            dict: A dictionary containing the calculated metrics.
+            dict: A dictionary where keys are the metric names and values are the computed scores.
         """
         predictions = self.predict(X)
         results = {}
@@ -444,12 +449,16 @@ class Plotting_Utils:
 
     def plot_learning_curve(self, train_sizes, train_scores, val_scores, figure='learning_curve.png'):
         """
-        Plots the learning curve.
+        Plots a learning curve for a model.
+
+        A learning curve shows the validation and training score of an estimator for varying numbers of training samples.
+        It is a tool to find out how much we benefit from adding more training data and whether the estimator suffers
+        more from a variance error or a bias error.
 
         Args:
-            train_sizes (list): The number of training examples used.
-            train_scores (list): The scores on the training set.
-            val_scores (list): The scores on the validation set.
+            train_sizes (list or np.ndarray): Numbers of training examples that has been used to generate the learning curve.
+            train_scores (np.ndarray): Scores on training sets.
+            val_scores (np.ndarray): Scores on validation sets.
             figure (str, optional): The filename to save the plot to. Defaults to 'learning_curve.png'.
         """
         train_scores_mean = np.mean(train_scores, axis=1)
