@@ -90,17 +90,13 @@ class Multi_Layer_ANN:
         self.X_train = self.device.array(X_train)
         self.y_train = self.device.array(Y_train)
 
-        self.input_dim = X_train.shape[1]
 
-        # Initialize weights and biases with He initialization for better convergence
+        # Initialize weights and biases
         if initial_weights == 'auto':
-            for i in range(len(self.layers) - 1):
-                if i == 0:
-                    fan_in = self.input_dim
-                else:
-                    fan_in = self.layers[i]
+            for i in range(len(hidden_layers)):
 
-                fan_out = self.layers[i + 1]
+                fan_in = self.layers[i]
+                fan_out = self.layers[i+1]
                 shape = (fan_in, fan_out)
                 
                 if self.activations[i] in ['relu', 'leaky_relu']:
@@ -111,10 +107,29 @@ class Multi_Layer_ANN:
                     weight_matrix = get_weight_initializer('xavier_normal',shape)
                     bias_vector = self.device.zeros((1, self.layers[i + 1]))
                 
+                else:
+                    weight_matrix = get_weight_initializer('random_normal',shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+                
                 self.weights.append(weight_matrix)
                 self.biases.append(bias_vector)
 
+        else:
 
+            for i in range(len(hidden_layers)):
+                fan_in = self.layers[i]
+                fan_out = self.layers[i+1]
+                shape = (fan_in, fan_out)
+
+                weight_matrix = get_weight_initializer(initial_weights,shape)
+                bias_vector = self.device.zeros((1, self.layers[i + 1]))
+
+                self.weights.append(weight_matrix)
+                self.biases.append(bias_vector)
+
+        # print(f"weights[0] : {self.weights[0]}")
+        # print(f"bias[0] : {self.biases[0]}")
+        
         # Initialize training attribute
         self.training = False
 
