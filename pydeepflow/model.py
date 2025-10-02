@@ -8,6 +8,7 @@ from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.cross_validator import CrossValidator
 from pydeepflow.batch_normalization import BatchNormalization
+from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
 import time
@@ -43,7 +44,7 @@ class Multi_Layer_ANN:
         batch_norm_layers (list): A list of BatchNormalization layers.
     """
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
-                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd'):
+                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd', initial_weights = 'auto'):
         """
         Initializes the Multi_Layer_ANN.
 
@@ -89,12 +90,30 @@ class Multi_Layer_ANN:
         self.X_train = self.device.array(X_train)
         self.y_train = self.device.array(Y_train)
 
+        self.input_dim = X_train.shape[1]
+
         # Initialize weights and biases with He initialization for better convergence
-        for i in range(len(self.layers) - 1):
-            weight_matrix = self.device.random().randn(self.layers[i], self.layers[i + 1]) * np.sqrt(2 / self.layers[i])
-            bias_vector = self.device.zeros((1, self.layers[i + 1]))
-            self.weights.append(weight_matrix)
-            self.biases.append(bias_vector)
+        if initial_weights == 'auto':
+            for i in range(len(self.layers) - 1):
+                if i == 0:
+                    fan_in = self.input_dim
+                else:
+                    fan_in = self.layers[i]
+
+                fan_out = self.layers[i + 1]
+                shape = (fan_in, fan_out)
+                
+                if self.activations[i] in ['relu', 'leaky_relu']:
+                    weight_matrix = get_weight_initializer('he_normal',shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+
+                elif self.activations[i] in ['sigmoid', 'tanh']:
+                    weight_matrix = get_weight_initializer('xavier_normal',shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+                
+                self.weights.append(weight_matrix)
+                self.biases.append(bias_vector)
+
 
         # Initialize training attribute
         self.training = False

@@ -192,4 +192,37 @@ def HeUniform(shape):
     return np.random.uniform(-limit, limit, (fan_in, fan_out))
 
 
+def get_weight_initializer(name,shape):
+    """
+    Retrieve a weight initialization function by name.
 
+    Parameters
+    ----------
+    name : str
+        Name of the weight initialization method. Supported names include:
+        'zeros', 'ones', 'random_normal', 'random_uniform', 'xavier_normal',
+        'xavier_uniform', 'he_normal', 'he_uniform'.
+
+    Returns
+    -------
+    function
+        Corresponding weight initialization function.
+
+    Raises
+    ------
+    ValueError
+        If the provided name does not match any supported initialization method.
+    """
+    initializers = {
+        'zeros': zeros(shape),
+        'ones': ones(shape),
+        'random_normal': RandomNormal(shape),
+        'random_uniform': RandomUniform(shape),
+        'xavier_normal': XavierNormal(shape),
+        'xavier_uniform': XavierUniform(shape),
+        'he_normal': HeNormal(shape),
+        'he_uniform': HeUniform(shape)
+    }
+    if name not in initializers:
+        raise ValueError(f"Unsupported weight initializer: {name}. Supported initializers are: {list(initializers.keys())}")
+    return initializers[name]
