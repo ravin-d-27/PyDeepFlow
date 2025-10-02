@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 from pydeepflow.device import Device
 
+
 class TestDevice(unittest.TestCase):
 
     def setUp(self):
@@ -35,6 +36,7 @@ class TestDevice(unittest.TestCase):
         result = self.device_cpu.dot(a, b)
         expected = np.dot(a, b)
         np.testing.assert_array_equal(result, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

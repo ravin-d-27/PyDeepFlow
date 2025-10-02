@@ -2,8 +2,9 @@ import numpy as np
 from itertools import product
 from pydeepflow.cross_validator import CrossValidator
 
+
 class GridSearchCV:
-    def __init__(self, model_class, param_grid, scoring='accuracy', cv=3):
+    def __init__(self, model_class, param_grid, scoring="accuracy", cv=3):
         """
         Initializes the GridSearchCV class.
 
@@ -38,27 +39,29 @@ class GridSearchCV:
         for params in param_combinations:
             params_dict = dict(zip(param_names, params))
             print(f"Testing parameters: {params_dict}")
-            
+
             fold_scores = []
             # Iterating over the pre-defined folds
             for train_index, val_index in cross_validator.split(X, y):
                 X_train, X_val = X[train_index], X[val_index]
                 y_train, y_val = y[train_index], y[val_index]
-                
+
                 model = self.model_class(X_train, y_train, **params_dict)
                 model.fit(epochs=10)
-                
+
                 results = model.evaluate(X_val, y_val, metrics=[self.scoring])
-                
-                if self.scoring == 'accuracy':
-                    fold_scores.append(results['accuracy'])
-                elif self.scoring == 'loss':
-                    fold_scores.append(-results['loss'])  # Assuming lower loss is better
+
+                if self.scoring == "accuracy":
+                    fold_scores.append(results["accuracy"])
+                elif self.scoring == "loss":
+                    fold_scores.append(
+                        -results["loss"]
+                    )  # Assuming lower loss is better
 
             avg_score = np.mean(fold_scores)
             print(f"Average score for parameters {params_dict}: {avg_score:.4f}")
             print()
-            
+
             # Update best score and parameters if applicable
             if avg_score > self.best_score:
                 self.best_score = avg_score

@@ -1,6 +1,7 @@
 import os
 import numpy as np
 
+
 class ModelCheckpoint:
     def __init__(self, save_dir, monitor="val_loss", save_best_only=True, save_freq=1):
         """
@@ -15,11 +16,10 @@ class ModelCheckpoint:
         self.save_best_only = save_best_only
         self.save_freq = save_freq
         self.best_metric = np.inf if "loss" in monitor else -np.inf
-        self.best_val_loss = float('inf')  # Initial best validation loss
+        self.best_val_loss = float("inf")  # Initial best validation loss
 
     def save_weights(self, epoch, weights, biases, val_loss):
-        
-        """ Saves weights and biases to the specified directory.
+        """Saves weights and biases to the specified directory.
         Args:
             epoch (int): The current epoch number.
             weights (numpy.ndarray): The weights of the model to be saved.
@@ -28,22 +28,21 @@ class ModelCheckpoint:
         Returns:
             None
         """
-        
+
         # Create the directory if it does not exist
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)  # Create the directory
 
         checkpoint_path = f"{self.save_dir}/checkpoint_epoch_{epoch}.npz"
-        
+
         # Prepare data to save
         data = {}
         for i, (w, b) in enumerate(zip(weights, biases)):
-            data[f'weights_layer_{i}'] = w  
-            data[f'biases_layer_{i}'] = b    
-        
+            data[f"weights_layer_{i}"] = w
+            data[f"biases_layer_{i}"] = b
+
         # Save as .npz file
         np.savez(checkpoint_path, **data)
-
 
     def should_save(self, epoch, metric):
         """
@@ -58,12 +57,11 @@ class ModelCheckpoint:
         """
         if self.save_freq and epoch % self.save_freq == 0:
             if self.save_best_only:
-                if ("loss" in self.monitor and metric < self.best_metric) or \
-                   ("accuracy" in self.monitor and metric > self.best_metric):
+                if ("loss" in self.monitor and metric < self.best_metric) or (
+                    "accuracy" in self.monitor and metric > self.best_metric
+                ):
                     self.best_metric = metric
                     return True
             else:
                 return True
         return False
-
-    

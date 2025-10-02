@@ -22,7 +22,7 @@ __all__ = [
     "ModelCheckpoint",
     "Regularization",
     "EarlyStopping",
-    "CrossValidator",  
+    "CrossValidator",
     "BatchNormalization",
     "GridSearchCV",
 ]

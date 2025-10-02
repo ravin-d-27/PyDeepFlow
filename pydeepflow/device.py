@@ -1,20 +1,22 @@
 import numpy as np
+
 try:
     import cupy as cp
 except ImportError:
     cp = None
 
+
 class Device:
     """
-    A utility class to handle computations on either CPU (NumPy) or GPU (CuPy) 
+    A utility class to handle computations on either CPU (NumPy) or GPU (CuPy)
     depending on the user's preference.
 
     Parameters:
     -----------
     use_gpu : bool, optional (default=False)
-        If True, the class uses GPU (CuPy) for array operations. If CuPy is not installed, 
+        If True, the class uses GPU (CuPy) for array operations. If CuPy is not installed,
         it raises an ImportError.
-    
+
     Attributes:
     -----------
     use_gpu : bool
@@ -25,11 +27,13 @@ class Device:
     ValueError
         If `use_gpu=True` but CuPy is not installed.
     """
-    
+
     def __init__(self, use_gpu=False):
         self.use_gpu = use_gpu
         if use_gpu and cp is None:
-            raise ValueError("CuPy is not installed, please install CuPy for GPU support.")
+            raise ValueError(
+                "CuPy is not installed, please install CuPy for GPU support."
+            )
 
     def abs(self, x):
         """
@@ -46,7 +50,6 @@ class Device:
             The absolute value of each element in `x`.
         """
         return cp.abs(x) if self.use_gpu else np.abs(x)
-
 
     def array(self, data):
         """
@@ -193,7 +196,11 @@ class Device:
         np.ndarray or cp.ndarray
             The sum of elements in `x` along the specified axis.
         """
-        return cp.sum(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.sum(x, axis=axis, keepdims=keepdims)
+        return (
+            cp.sum(x, axis=axis, keepdims=keepdims)
+            if self.use_gpu
+            else np.sum(x, axis=axis, keepdims=keepdims)
+        )
 
     def where(self, condition, x, y):
         """
@@ -246,7 +253,7 @@ class Device:
             The natural logarithm of each element in `x`.
         """
         return cp.log(x) if self.use_gpu else np.log(x)
-    
+
     def asnumpy(self, x):
         """
         Converts a CuPy array to a NumPy array, or simply returns the input if it is already a NumPy array.
@@ -281,8 +288,12 @@ class Device:
         np.ndarray or cp.ndarray
             The maximum value(s) in `x` along the specified axis.
         """
-        return cp.max(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.max(x, axis=axis, keepdims=keepdims)
-    
+        return (
+            cp.max(x, axis=axis, keepdims=keepdims)
+            if self.use_gpu
+            else np.max(x, axis=axis, keepdims=keepdims)
+        )
+
     def norm(self, x, ord=None, axis=None, keepdims=False):
         """
         Matrix or vector norm.
@@ -308,7 +319,11 @@ class Device:
             Norm of matrix or vector(s).
         """
 
-        return cp.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims) if self.use_gpu else np.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
+        return (
+            cp.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
+            if self.use_gpu
+            else np.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
+        )
 
     def ones(self, shape):
         """
@@ -325,8 +340,7 @@ class Device:
             An array of ones, either using NumPy or CuPy.
         """
         return cp.ones(shape) if self.use_gpu else np.ones(shape)
-    
-    
+
     def mean(self, x, axis=None, keepdims=False):
         """
         Computes the mean of the input array along the specified axis.
@@ -345,14 +359,18 @@ class Device:
         np.ndarray or cp.ndarray
             The mean of the input array along the specified axis.
         """
-        return cp.mean(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.mean(x, axis=axis, keepdims=keepdims)
+        return (
+            cp.mean(x, axis=axis, keepdims=keepdims)
+            if self.use_gpu
+            else np.mean(x, axis=axis, keepdims=keepdims)
+        )
 
     def var(self, x, axis=None, keepdims=False):
         """
         Computes the variance of an array along a specified axis.
 
         Parameters:
-        ----------- 
+        -----------
         x : np.ndarray or cp.ndarray
             Input array.
         axis : int or None, optional (default=None)
@@ -365,4 +383,8 @@ class Device:
         np.ndarray or cp.ndarray
             The variance of the input array along the specified axis.
         """
-        return cp.var(x, axis=axis, keepdims=keepdims) if self.use_gpu else np.var(x, axis=axis, keepdims=keepdims)
+        return (
+            cp.var(x, axis=axis, keepdims=keepdims)
+            if self.use_gpu
+            else np.var(x, axis=axis, keepdims=keepdims)
+        )
