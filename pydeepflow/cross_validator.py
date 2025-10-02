@@ -2,6 +2,7 @@
 import numpy as np
 from sklearn.model_selection import KFold
 
+
 class CrossValidator:
     def __init__(self, n_splits=5):
         """
@@ -42,6 +43,6 @@ class CrossValidator:
         results = {}
         for metric in metrics:
             if metric == "accuracy":
-                results['accuracy'] = np.mean(y_true == y_pred)
-            
+                results["accuracy"] = np.mean(y_true == y_pred)
+
         return results

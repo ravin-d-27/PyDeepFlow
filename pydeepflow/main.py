@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
 from pydeepflow.cross_validator import CrossValidator  # Import CrossValidator
 
+
 def load_and_preprocess_data(url):
     """
     Loads the Iris dataset from a URL, preprocesses it, and prepares it for training.
@@ -25,11 +26,15 @@ def load_and_preprocess_data(url):
             - y_one_hot (np.ndarray): The one-hot encoded labels.
     """
     # Load the Iris dataset
-    df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
+    df = pd.read_csv(
+        url,
+        header=None,
+        names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"],
+    )
     print(df.head())
 
     # Encode species labels to integers
-    df['species'] = df['species'].astype('category').cat.codes
+    df["species"] = df["species"].astype("category").cat.codes
 
     # Split data into features (X) and labels (y)
     X = df.iloc[:, :-1].values
@@ -43,6 +48,7 @@ def load_and_preprocess_data(url):
     X = scaler.fit_transform(X)
 
     return X, y_one_hot
+
 
 if __name__ == "__main__":
     """
@@ -66,18 +72,27 @@ if __name__ == "__main__":
 
     # Ask the user whether to use GPU
     use_gpu_input = input("Use GPU? (y/n): ").strip().lower()
-    use_gpu = True if use_gpu_input == 'y' else False
+    use_gpu = True if use_gpu_input == "y" else False
 
     # Define the architecture of the network
     hidden_layers = [5, 5]
-    activations = ['relu', 'relu']
+    activations = ["relu", "relu"]
 
     # Initialize the ANN with use_gpu option
-    ann = Multi_Layer_ANN(X, y_one_hot, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
+    ann = Multi_Layer_ANN(
+        X,
+        y_one_hot,
+        hidden_layers,
+        activations,
+        loss="categorical_crossentropy",
+        use_gpu=use_gpu,
+    )
 
     # Initialize CrossValidator and perform K-Fold Cross Validation
     cross_validator = CrossValidator(k=n_splits, metrics=["accuracy"])
-    results = cross_validator.evaluate(ann, X, y_one_hot, epochs=1000, learning_rate=0.01, verbose=True)
+    results = cross_validator.evaluate(
+        ann, X, y_one_hot, epochs=1000, learning_rate=0.01, verbose=True
+    )
 
     # Print cross-validation results
     print("Cross-Validation Results:", results)

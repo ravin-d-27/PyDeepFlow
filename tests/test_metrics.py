@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
+
 class TestMetrics(unittest.TestCase):
 
     def setUp(self):
@@ -26,7 +27,10 @@ class TestMetrics(unittest.TestCase):
         # TN = 1, FP = 1
         # FN = 1, TP = 3
         expected_matrix = np.array([[1, 1], [1, 3]])
-        np.testing.assert_array_equal(confusion_matrix(self.y_true, self.y_pred, num_classes=2), expected_matrix)
+        np.testing.assert_array_equal(
+            confusion_matrix(self.y_true, self.y_pred, num_classes=2), expected_matrix
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

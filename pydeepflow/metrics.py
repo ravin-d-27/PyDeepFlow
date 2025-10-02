@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def precision_score(y_true, y_pred):
     """
     Calculates the precision for binary classification.
@@ -18,6 +19,7 @@ def precision_score(y_true, y_pred):
     predicted_positives = np.sum(y_pred == 1)
     precision = true_positives / (predicted_positives + 1e-7)
     return precision
+
 
 def recall_score(y_true, y_pred):
     """
@@ -38,6 +40,7 @@ def recall_score(y_true, y_pred):
     recall = true_positives / (actual_positives + 1e-7)
     return recall
 
+
 def f1_score(y_true, y_pred):
     """
     Calculates the F1-score, which is the harmonic mean of precision and recall.
@@ -56,6 +59,7 @@ def f1_score(y_true, y_pred):
     recall = recall_score(y_true, y_pred)
     f1 = 2 * (precision * recall) / (precision + recall + 1e-7)
     return f1
+
 
 def confusion_matrix(y_true, y_pred, num_classes):
     """

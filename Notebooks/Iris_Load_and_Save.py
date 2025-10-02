@@ -3,7 +3,7 @@ import os
 
 # Get the current directory of the notebook and go up to the project root
 current_dir = os.getcwd()  # Get the current working directory
-project_root = os.path.abspath(os.path.join(current_dir, '..'))
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
 print(project_root)
 sys.path.append(project_root)
 
@@ -15,11 +15,15 @@ from model import Multi_Layer_ANN
 
 
 url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
-df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
+df = pd.read_csv(
+    url,
+    header=None,
+    names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"],
+)
 
 print(df.head())
 
-df['species'] = df['species'].astype('category').cat.codes
+df["species"] = df["species"].astype("category").cat.codes
 
 
 X = df.iloc[:, :-1].values
@@ -27,7 +31,9 @@ y = df.iloc[:, -1].values
 
 y_one_hot = np.eye(len(np.unique(y)))[y]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y_one_hot, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_one_hot, test_size=0.2, random_state=42
+)
 
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
@@ -36,9 +42,11 @@ X_test = scaler.transform(X_test)
 
 # Define the architecture
 hidden_layers = [5, 5]
-activations = ['relu', 'relu']
+activations = ["relu", "relu"]
 
-ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy')
+ann = Multi_Layer_ANN(
+    X_train, y_train, hidden_layers, activations, loss="categorical_crossentropy"
+)
 ann.fit(epochs=1000, learning_rate=0.01)
 
 # Make predictions
@@ -55,11 +63,13 @@ print(f"Test Accuracy: {accuracy * 100:.2f}%")
 
 
 # After training your model
-ann.save_model('my_ann_model.pkl')
+ann.save_model("my_ann_model.pkl")
 
 # To load the model later
-ann_loaded = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations, loss='categorical_crossentropy')
-ann_loaded.load_model('my_ann_model.pkl')
+ann_loaded = Multi_Layer_ANN(
+    X_train, y_train, hidden_layers, activations, loss="categorical_crossentropy"
+)
+ann_loaded.load_model("my_ann_model.pkl")
 
 print("After Loading...")
 print(ann_loaded.predict(X_test))

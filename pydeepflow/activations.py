@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def activation(x, func, device, alpha=0.01):
     """
     Applies the specified activation function to the input data.
@@ -52,51 +53,54 @@ def activation(x, func, device, alpha=0.01):
     - Hardshrink: Similar to Softshrink but with hard cutoffs at alpha and -alpha.
     - Softmax: Maps input to a probability distribution by exponentiating and normalizing the inputs.
     """
-    if func == 'relu':
+    if func == "relu":
         return device.maximum(0, x)
-    elif func == 'leaky_relu':
+    elif func == "leaky_relu":
         return device.where(x > 0, x, alpha * x)
-    elif func == 'prelu':
+    elif func == "prelu":
         return device.where(x > 0, x, alpha * x)
-    elif func == 'elu':
+    elif func == "elu":
         return device.where(x > 0, x, alpha * (device.exp(x) - 1))
-    elif func == 'gelu':
-        return 0.5 * x * (1 + device.tanh(device.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3))) 
-    elif func == 'swish':
+    elif func == "gelu":
+        return (
+            0.5 * x * (1 + device.tanh(device.sqrt(2 / np.pi) * (x + 0.044715 * x**3)))
+        )
+    elif func == "swish":
         return x / (1 + device.exp(-x))
-    elif func == 'selu':
+    elif func == "selu":
         lam = 1.0507
         alpha_selu = 1.67326
         return lam * device.where(x > 0, x, alpha_selu * (device.exp(x) - 1))
-    elif func == 'softplus':
+    elif func == "softplus":
         return device.log(1 + device.exp(x))
-    elif func == 'mish':
+    elif func == "mish":
         return x * device.tanh(device.log(1 + device.exp(x)))
-    elif func == 'rrelu':
+    elif func == "rrelu":
         return device.where(x > 0, x, alpha * x)
-    elif func == 'hardswish':
+    elif func == "hardswish":
         return x * device.where(x > 3, 1, device.where(x < -3, 0, (x + 3) / 6))
-    elif func == 'sigmoid':
+    elif func == "sigmoid":
         return 1 / (1 + device.exp(-x))
-    elif func == 'softsign':
+    elif func == "softsign":
         return x / (1 + device.abs(x))
-    elif func == 'tanh':
+    elif func == "tanh":
         return device.tanh(x)
-    elif func == 'hardtanh':
+    elif func == "hardtanh":
         return device.where(x > 1, 1, device.where(x < -1, -1, x))
-    elif func == 'hardsigmoid':
+    elif func == "hardsigmoid":
         return device.where(x > 1, 1, device.where(x < -1, 0, (x + 1) / 2))
-    elif func == 'tanhshrink':
+    elif func == "tanhshrink":
         return x - device.tanh(x)
-    elif func == 'softshrink':
+    elif func == "softshrink":
         return device.where(device.abs(x) > alpha, x - alpha * device.sign(x), 0)
-    elif func == 'hardshrink':
+    elif func == "hardshrink":
         return device.where(device.abs(x) > alpha, x, 0)
-    elif func == 'softmax':
+    elif func == "softmax":
         exp_x = device.exp(x - device.max(x, axis=-1, keepdims=True))
         return exp_x / device.sum(exp_x, axis=-1, keepdims=True)
     else:
         raise ValueError(f"Unsupported activation function: {func}")
+
 
 def activation_derivative(x, func, device, alpha=0.01):
     """
@@ -149,51 +153,56 @@ def activation_derivative(x, func, device, alpha=0.01):
     - The Softshrink and Hardshrink derivatives are 1 where |x| > alpha, otherwise 0.
     - The Softmax derivative assumes usage with cross-entropy loss, resulting in softmax(x) * (1 - softmax(x)).
     """
-    if func == 'relu':
+    if func == "relu":
         return device.where(x > 0, 1, 0)
-    elif func == 'leaky_relu':
+    elif func == "leaky_relu":
         return device.where(x > 0, 1, alpha)
-    elif func == 'prelu':
+    elif func == "prelu":
         return device.where(x > 0, 1, alpha)
-    elif func == 'elu':
+    elif func == "elu":
         return device.where(x > 0, 1, alpha * device.exp(x))
-    elif func == 'gelu':
-        return 0.5 * (1 + device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x ** 3))) + \
-               0.5 * x * (1 - device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x ** 3)) ** 2)
-    elif func == 'swish':
+    elif func == "gelu":
+        return 0.5 * (
+            1 + device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x**3))
+        ) + 0.5 * x * (
+            1 - device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x**3)) ** 2
+        )
+    elif func == "swish":
         sigma = 1 / (1 + device.exp(-x))
         return sigma + x * sigma * (1 - sigma)
-    elif func == 'selu':
+    elif func == "selu":
         lam = 1.0507
         alpha_selu = 1.67326
         return lam * device.where(x > 0, 1, alpha_selu * device.exp(x))
-    elif func == 'softplus':
+    elif func == "softplus":
         return 1 / (1 + device.exp(-x))
-    elif func == 'mish':
+    elif func == "mish":
         sp = device.log(1 + device.exp(x))
         tanh_sp = device.tanh(sp)
-        return device.exp(x) * (tanh_sp + x * (1 - tanh_sp ** 2) / sp) / (1 + device.exp(-x))
-    elif func == 'rrelu':
+        return (
+            device.exp(x) * (tanh_sp + x * (1 - tanh_sp**2) / sp) / (1 + device.exp(-x))
+        )
+    elif func == "rrelu":
         return device.where(x > 0, 1, alpha)
-    elif func == 'hardswish':
+    elif func == "hardswish":
         return device.where(x > -3, device.where(x < 3, x / 3 + 0.5, 1), 0)
-    elif func == 'sigmoid':
+    elif func == "sigmoid":
         return x * (1 - x)
-    elif func == 'softsign':
+    elif func == "softsign":
         return 1 / (1 + device.abs(x)) ** 2
-    elif func == 'tanh':
-        return 1 - x ** 2
-    elif func == 'hardtanh':
+    elif func == "tanh":
+        return 1 - x**2
+    elif func == "hardtanh":
         return device.where(device.abs(x) <= 1, 1, 0)
-    elif func == 'hardsigmoid':
+    elif func == "hardsigmoid":
         return device.where(device.abs(x) <= 1, 0.5, 0)
-    elif func == 'tanhshrink':
+    elif func == "tanhshrink":
         return 1 - device.tanh(x) ** 2
-    elif func == 'softshrink':
+    elif func == "softshrink":
         return device.where(device.abs(x) > alpha, 1, 0)
-    elif func == 'hardshrink':
+    elif func == "hardshrink":
         return device.where(device.abs(x) > alpha, 1, 0)
-    elif func == 'softmax':
+    elif func == "softmax":
         return x * (1 - x)
     else:
         raise ValueError(f"Unsupported activation derivative: {func}")

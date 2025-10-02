@@ -1,5 +1,6 @@
-import numpy as np 
+import numpy as np
 from .device import Device
+
 
 class Regularization:
     """
@@ -14,6 +15,7 @@ class Regularization:
         dropout_rate (float): The probability of setting a neuron's output to zero during dropout.
         device (Device): The device (CPU or GPU) on which to perform computations.
     """
+
     def __init__(self, l2_lambda=0.0, dropout_rate=0.0):
         """
         Initializes the Regularization instance.
@@ -65,5 +67,5 @@ class Regularization:
             dropout_mask = self.device.random().rand(*A.shape) > self.dropout_rate
             A *= dropout_mask
         else:
-            A *= (1 - self.dropout_rate)
+            A *= 1 - self.dropout_rate
         return A
