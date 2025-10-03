@@ -9,6 +9,9 @@ from .early_stopping import EarlyStopping
 from .cross_validator import CrossValidator
 from .batch_normalization import BatchNormalization
 from .gridSearch import GridSearchCV
+from .model import ConvLayer
+from .model import Flatten
+from .model import Multi_Layer_CNN 
 
 __all__ = [
     "activation",
@@ -25,4 +28,7 @@ __all__ = [
     "CrossValidator",  
     "BatchNormalization",
     "GridSearchCV",
+    "ConvLayer",
+    "Flatten",
+    "Multi_Layer_CNN",
 ]
