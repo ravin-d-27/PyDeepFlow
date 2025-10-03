@@ -8,6 +8,7 @@ from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.cross_validator import CrossValidator
 from pydeepflow.batch_normalization import BatchNormalization
+from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
 import numpy as np
@@ -231,7 +232,24 @@ class Multi_Layer_ANN:
     A Multi-Layer Dense ANN wrapper (keeps compatibility with earlier code).
     """
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
-                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd'):
+                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd', initial_weights = 'auto'):
+        """
+        Initializes the Multi_Layer_ANN.
+
+        Args:
+            X_train (np.ndarray): The training input data.
+            Y_train (np.ndarray): The training target data.
+            hidden_layers (list): A list of integers specifying the number of neurons in each hidden layer.
+            activations (list): A list of strings specifying the activation function for each hidden layer.
+            loss (str, optional): The loss function to use. Defaults to 'categorical_crossentropy'.
+            use_gpu (bool, optional): If True, computations will be performed on the GPU. Defaults to False.
+            l2_lambda (float, optional): The L2 regularization parameter. Defaults to 0.0.
+            dropout_rate (float, optional): The dropout rate for regularization. Defaults to 0.0.
+            use_batch_norm (bool, optional): If True, batch normalization will be applied. Defaults to False.
+
+        Raises:
+            ValueError: If the number of activation functions does not match the number of hidden layers.
+        """
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
 
@@ -248,7 +266,8 @@ class Multi_Layer_ANN:
             self.output_activation = 'softmax'
 
         self.activations = activations
-
+        self.initial_weights = initial_weights
+        
         # external lists kept for compatibility
         self.weights = []
         self.biases = []
@@ -265,16 +284,85 @@ class Multi_Layer_ANN:
         self.X_train = self.device.array(X_train)
         self.y_train = self.device.array(Y_train)
 
-        # initialize dense weights (He init)
-        for i in range(len(self.layers) - 1):
-            w = self.device.random().randn(self.layers[i], self.layers[i + 1]) * np.sqrt(2 / max(1, self.layers[i]))
-            b = self.device.zeros((1, self.layers[i + 1]))
-            self.dense_layer_weights.append(w)
-            self.dense_layer_biases.append(b)
 
-        # sync external lists
-        self.weights = self.dense_layer_weights
-        self.biases = self.dense_layer_biases
+        # Initialize weights and biases
+        """
+            Initializes the weights and biases for each layer in the neural network.
+
+            This function checks the `initial_weights` argument and initializes the weights and biases accordingly:
+            - If `initial_weights == 'auto'`, it will automatically choose a weight initialization method based on the activation function used for each layer.
+            - If `initial_weights` is a string (e.g., 'he_normal', 'xavier_normal', etc.), it will use that method for all layers.
+            - If `initial_weights` is a list of strings, it must match the number of hidden layers, and each element in the list will be used to initialize the weights of the corresponding layer.
+
+            Raises:
+            -------
+            ValueError:
+                If `initial_weights` is a list but its length does not match the number of hidden layers.
+                If `initial_weights` is neither a string nor a list of strings.
+            
+            Notes:
+            ------
+            The weight initialization methods are selected based on the activation function used for each layer:
+            - For 'relu', 'leaky_relu', or 'elu', 'he_normal' is used.
+            - For 'sigmoid' or 'tanh', 'xavier_normal' is used.
+            - For other activation functions, 'random_normal' is used by default.
+
+            Bias vectors are initialized as zeros for each layer.
+        """
+
+        if self.initial_weights == 'auto':
+            for i in range(len(hidden_layers)):
+
+                fan_in = self.layers[i]
+                fan_out = self.layers[i+1]
+                shape = (fan_in, fan_out)
+                
+                if self.activations[i] in ['relu', 'leaky_relu', 'prelu', 'elu', 'gelu', 'swish', 'selu', 'rrelu', 'hardswish', 'mish']:
+                    weight_matrix = get_weight_initializer('he_normal',shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+
+                elif self.activations[i] in ['sigmoid', 'tanh', 'softplus', 'softsign', 'hardtanh', 'hardsigmoid', 'tanhshrink']:
+                    weight_matrix = get_weight_initializer('xavier_normal',shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+                
+                else:
+                    weight_matrix = get_weight_initializer('random_normal',shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+                
+                self.dense_layer_weights.append(weight_matrix)
+                self.dense_layer_biases.append(bias_vector)
+
+        else:
+            if type(self.initial_weights) == str:
+                for i in range(len(hidden_layers)):
+                    fan_in = self.layers[i]
+                    fan_out = self.layers[i+1]
+                    shape = (fan_in, fan_out)
+
+                    weight_matrix = get_weight_initializer(self.initial_weights,shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+
+                    self.dense_layer_weights.append(weight_matrix)
+                    self.dense_layer_biases.append(bias_vector)
+
+            elif type(self.initial_weights) == list:
+                if len(initial_weights) != len(hidden_layers):
+                    raise ValueError("The number of initial weight matrices must match the number of hidden layers.")
+                for i in range(len(hidden_layers)):
+                    fan_in = self.layers[i]
+                    fan_out = self.layers[i+1]
+                    shape = (fan_in, fan_out)
+
+                    weight_matrix = get_weight_initializer(self.initial_weights[i],shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+
+                    self.dense_layer_weights.append(weight_matrix)
+                    self.dense_layer_biases.append(bias_vector)
+            else:
+                raise ValueError("initial_weights must be either a string or a list of strings.")
+            
+            self.weights = self.dense_layer_weights
+            self.biases = self.dense_layer_biases
 
         self.training = False
 
