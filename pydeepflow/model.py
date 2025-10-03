@@ -93,6 +93,30 @@ class Multi_Layer_ANN:
 
 
         # Initialize weights and biases
+        """
+            Initializes the weights and biases for each layer in the neural network.
+
+            This function checks the `initial_weights` argument and initializes the weights and biases accordingly:
+            - If `initial_weights == 'auto'`, it will automatically choose a weight initialization method based on the activation function used for each layer.
+            - If `initial_weights` is a string (e.g., 'he_normal', 'xavier_normal', etc.), it will use that method for all layers.
+            - If `initial_weights` is a list of strings, it must match the number of hidden layers, and each element in the list will be used to initialize the weights of the corresponding layer.
+
+            Raises:
+            -------
+            ValueError:
+                If `initial_weights` is a list but its length does not match the number of hidden layers.
+                If `initial_weights` is neither a string nor a list of strings.
+            
+            Notes:
+            ------
+            The weight initialization methods are selected based on the activation function used for each layer:
+            - For 'relu', 'leaky_relu', or 'elu', 'he_normal' is used.
+            - For 'sigmoid' or 'tanh', 'xavier_normal' is used.
+            - For other activation functions, 'random_normal' is used by default.
+
+            Bias vectors are initialized as zeros for each layer.
+        """
+
         if initial_weights == 'auto':
             for i in range(len(hidden_layers)):
 
@@ -100,11 +124,11 @@ class Multi_Layer_ANN:
                 fan_out = self.layers[i+1]
                 shape = (fan_in, fan_out)
                 
-                if self.activations[i] in ['relu', 'leaky_relu', 'elu']:
+                if self.activations[i] in ['relu', 'leaky_relu', 'prelu', 'elu', 'gelu', 'swish', 'selu', 'rrelu', 'hardswish', 'mish']:
                     weight_matrix = get_weight_initializer('he_normal',shape)
                     bias_vector = self.device.zeros((1, self.layers[i + 1]))
 
-                elif self.activations[i] in ['sigmoid', 'tanh']:
+                elif self.activations[i] in ['sigmoid', 'tanh', 'softplus', 'softsign', 'hardtanh', 'hardsigmoid', 'tanhshrink']:
                     weight_matrix = get_weight_initializer('xavier_normal',shape)
                     bias_vector = self.device.zeros((1, self.layers[i + 1]))
                 
