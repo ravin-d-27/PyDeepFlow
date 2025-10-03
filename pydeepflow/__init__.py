@@ -10,6 +10,9 @@ from .cross_validator import CrossValidator
 from .batch_normalization import BatchNormalization
 from .gridSearch import GridSearchCV
 from .weight_initialization import get_weight_initializer
+from .model import ConvLayer
+from .model import Flatten
+from .model import Multi_Layer_CNN 
 
 __all__ = [
     "activation",
@@ -27,4 +30,7 @@ __all__ = [
     "BatchNormalization",
     "GridSearchCV",
     "get_weight_initializer"
+    "ConvLayer",
+    "Flatten",
+    "Multi_Layer_CNN",
 ]
