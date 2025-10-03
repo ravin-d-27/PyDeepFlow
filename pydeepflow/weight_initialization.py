@@ -138,8 +138,7 @@ def XavierUniform(shape):
     limit = np.sqrt(6. / (fan_in + fan_out))
     return np.random.uniform(-limit, limit, (fan_in, fan_out))
 
-glorot_normal = XavierNormal  # Alias for Xavier normal initialization
-glorot_uniform = XavierUniform  # Alias for Xavier uniform initialization
+
 
 def HeNormal(shape):
     """
@@ -221,7 +220,9 @@ def get_weight_initializer(name,shape):
         'xavier_normal': XavierNormal(shape),
         'xavier_uniform': XavierUniform(shape),
         'he_normal': HeNormal(shape),
-        'he_uniform': HeUniform(shape)
+        'he_uniform': HeUniform(shape),
+        'glorot_normal' : XavierNormal(shape),  # Alias for Xavier normal initialization
+        'glorot_uniform' : XavierUniform(shape) # Alias for Xavier uniform initialization
     }
     if name not in initializers:
         raise ValueError(f"Unsupported weight initializer: {name}. Supported initializers are: {list(initializers.keys())}")

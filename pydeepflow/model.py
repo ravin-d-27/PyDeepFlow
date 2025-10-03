@@ -74,6 +74,7 @@ class Multi_Layer_ANN:
             self.output_activation = 'softmax'
 
         self.activations = activations
+        self.initial_weights = initial_weights
         self.weights = []
         self.biases = []
 
@@ -99,7 +100,7 @@ class Multi_Layer_ANN:
                 fan_out = self.layers[i+1]
                 shape = (fan_in, fan_out)
                 
-                if self.activations[i] in ['relu', 'leaky_relu']:
+                if self.activations[i] in ['relu', 'leaky_relu', 'elu']:
                     weight_matrix = get_weight_initializer('he_normal',shape)
                     bias_vector = self.device.zeros((1, self.layers[i + 1]))
 
@@ -115,21 +116,34 @@ class Multi_Layer_ANN:
                 self.biases.append(bias_vector)
 
         else:
+            if type(initial_weights) == str:
+                for i in range(len(hidden_layers)):
+                    fan_in = self.layers[i]
+                    fan_out = self.layers[i+1]
+                    shape = (fan_in, fan_out)
 
-            for i in range(len(hidden_layers)):
-                fan_in = self.layers[i]
-                fan_out = self.layers[i+1]
-                shape = (fan_in, fan_out)
+                    weight_matrix = get_weight_initializer(initial_weights,shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
 
-                weight_matrix = get_weight_initializer(initial_weights,shape)
-                bias_vector = self.device.zeros((1, self.layers[i + 1]))
+                    self.weights.append(weight_matrix)
+                    self.biases.append(bias_vector)
 
-                self.weights.append(weight_matrix)
-                self.biases.append(bias_vector)
+            elif type(initial_weights) == list:
+                if len(initial_weights) != len(hidden_layers):
+                    raise ValueError("The number of initial weight matrices must match the number of hidden layers.")
+                for i in range(len(hidden_layers)):
+                    fan_in = self.layers[i]
+                    fan_out = self.layers[i+1]
+                    shape = (fan_in, fan_out)
 
-        # print(f"weights[0] : {self.weights[0]}")
-        # print(f"bias[0] : {self.biases[0]}")
-        
+                    weight_matrix = get_weight_initializer(initial_weights[i],shape)
+                    bias_vector = self.device.zeros((1, self.layers[i + 1]))
+
+                    self.weights.append(weight_matrix)
+                    self.biases.append(bias_vector)
+            else:
+                raise ValueError("initial_weights must be either a string or a list of strings.")
+
         # Initialize training attribute
         self.training = False
 
