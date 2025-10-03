@@ -11,6 +11,7 @@ from .batch_normalization import BatchNormalization
 from .gridSearch import GridSearchCV
 from .model import ConvLayer
 from .model import Flatten
+from .model import Multi_Layer_CNN 
 
 __all__ = [
     "activation",
@@ -29,4 +30,5 @@ __all__ = [
     "GridSearchCV",
     "ConvLayer",
     "Flatten",
+    "Multi_Layer_CNN",
 ]
