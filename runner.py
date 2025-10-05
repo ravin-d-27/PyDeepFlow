@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         # Initialize the ANN for each fold without batch normalization
         ann = Multi_Layer_ANN(X_train, y_train, hidden_layers, activations,
-                              loss='categorical_crossentropy', use_gpu=use_gpu, optimizer=optimizer)
+                              loss='categorical_crossentropy', use_gpu=use_gpu, optimizer=optimizer,initial_weights='auto')
 
         # Callback functions
         lr_scheduler = LearningRateScheduler(initial_lr=0.01, strategy="cyclic")
