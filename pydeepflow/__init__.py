@@ -29,7 +29,7 @@ __all__ = [
     "CrossValidator",  
     "BatchNormalization",
     "GridSearchCV",
-    "get_weight_initializer",
+    "get_weight_initializer"
     "ConvLayer",
     "Flatten",
     "Multi_Layer_CNN",
