@@ -383,6 +383,37 @@ class ModelValidator:
             elif layer_type == 'dense':
                 self._validate_dense_layer_config(layer_config, i)
     
+    def validate_cnn_input_data(self, X_train, layers_config):
+        """
+        Validate that X_train is compatible with CNN layer configuration.
+        
+        Args:
+            X_train: Training input data
+            layers_config (list): List of layer configuration dictionaries
+            
+        Raises:
+            ValueError: If X_train is not compatible with CNN layers
+        """
+        X_array = np.asarray(X_train)
+        
+        # Check if first layer is convolutional
+        first_layer = layers_config[0] if layers_config else None
+        if first_layer and first_layer.get('type', '').lower() == 'conv':
+            if X_array.ndim != 4:
+                raise ValueError(f"CNN models with convolutional layers require 4D input data (N, H, W, C), "
+                               f"got {X_array.ndim}D array with shape {X_array.shape}")
+            
+            if X_array.shape[1] <= 0 or X_array.shape[2] <= 0 or X_array.shape[3] <= 0:
+                raise ValueError(f"Invalid input dimensions for CNN: {X_array.shape}. "
+                               f"Height, width, and channels must be positive")
+        
+        # Additional validation for minimum image size
+        if X_array.ndim == 4:
+            height, width = X_array.shape[1], X_array.shape[2]
+            if height < 3 or width < 3:
+                raise ValueError(f"Input images too small for CNN: {height}x{width}. "
+                               f"Minimum recommended size is 3x3")
+    
     def _validate_conv_layer_config(self, config, layer_index):
         """Validate convolutional layer configuration."""
         required_fields = ['out_channels', 'kernel_size']
