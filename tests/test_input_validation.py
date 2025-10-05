@@ -519,5 +519,30 @@ class TestInputValidation(unittest.TestCase):
                                   batch_size=params['batch_size'])
             self.assertIsNotNone(model)
 
+    # Initial weights validation tests
+    def test_initial_weights_valid(self):
+        """Test valid initial_weights values work."""
+        valid_weights = ['auto', 'he', 'xavier', 'glorot', 'lecun', 'random']
+        
+        for weight_init in valid_weights:
+            model = Multi_Layer_ANN(self.X_train_valid, self.y_train_multiclass,
+                                   [10], ['relu'], initial_weights=weight_init)
+            self.assertIsNotNone(model)
+
+    def test_initial_weights_invalid(self):
+        """Test invalid initial_weights values are rejected."""
+        with self.assertRaises(ValueError) as context:
+            Multi_Layer_ANN(self.X_train_valid, self.y_train_multiclass,
+                           [10], ['relu'], initial_weights='invalid')
+        self.assertIn("Unsupported initial_weights", str(context.exception))
+
+    def test_initial_weights_wrong_type(self):
+        """Test initial_weights must be string."""
+        with self.assertRaises(TypeError) as context:
+            Multi_Layer_ANN(self.X_train_valid, self.y_train_multiclass,
+                           [10], ['relu'], initial_weights=123)
+        self.assertIn("must be a string", str(context.exception))
+
+
 if __name__ == '__main__':
     unittest.main()
