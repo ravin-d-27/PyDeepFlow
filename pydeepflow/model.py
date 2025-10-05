@@ -11,6 +11,7 @@ from pydeepflow.batch_normalization import BatchNormalization
 from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
+from pydeepflow.introspection import create_introspector, ModelSummaryFormatter
 import numpy as np
 import sys
 import time
@@ -275,9 +276,28 @@ class Multi_Layer_ANN:
         Raises:
             ValueError: If the number of activation functions does not match the number of hidden layers.
         """
-        # Validate inputs before proceeding with initialization
-        self._validate_inputs(X_train, Y_train, hidden_layers, activations, loss, 
-                             l2_lambda, dropout_rate, optimizer, learning_rate, epochs, batch_size, initial_weights)
+        # Validate inputs using the ModelValidator utility
+        from pydeepflow.validation import ModelValidator
+        validator = ModelValidator()
+        
+        # Validate training data
+        validator.validate_training_data(X_train, "X_train")
+        validator.validate_training_data(Y_train, "Y_train")
+        validator.validate_data_compatibility(X_train, Y_train)
+        
+        # Validate architecture
+        validator.validate_hidden_layers(hidden_layers)
+        validator.validate_activations(activations, hidden_layers)
+        validator.validate_loss_function(loss)
+        
+        # Validate parameters
+        validator.validate_regularization_params(l2_lambda, dropout_rate)
+        validator.validate_optimizer(optimizer)
+        
+        # Validate hyperparameters and get adjusted batch_size
+        adjusted_batch_size = validator.validate_training_hyperparameters(
+            learning_rate, epochs, batch_size, X_train)
+        self.batch_size = adjusted_batch_size
         
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
@@ -625,6 +645,54 @@ class Multi_Layer_ANN:
         self.activations = model_data['activations']
         self.output_activation = model_data['output_activation']
         print(f"Model loaded from {file_path}")
+
+    def summary(self):
+        """
+        Displays a summary of the model architecture using the introspection module.
+        
+        This method provides a comprehensive overview of the neural network structure,
+        similar to Keras model.summary(), showing:
+        - Layer-by-layer breakdown with input/output shapes
+        - Parameter count for each layer
+        - Total trainable parameters
+        - Estimated memory usage
+        - Model configuration details
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        summary_text = ModelSummaryFormatter.format_summary(
+            layer_info, param_counts, memory_usage, configuration, "Multi_Layer_ANN"
+        )
+        print(summary_text)
+
+    def get_model_info(self):
+        """
+        Returns a dictionary containing detailed model information using the introspection module.
+        
+        This method provides programmatic access to model architecture details,
+        useful for automated analysis or integration with other tools.
+        
+        Returns:
+            dict: A dictionary containing:
+                - layer_info: List of dictionaries with layer details
+                - total_params: Total number of parameters
+                - memory_usage: Estimated memory usage in MB
+                - configuration: Model configuration details
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        return ModelSummaryFormatter.format_model_info(
+            layer_info, param_counts, memory_usage, configuration
+        )
+        return introspector.get_model_info()
 
     def _validate_inputs(self, X_train, Y_train, hidden_layers, activations, loss, 
                         l2_lambda, dropout_rate, optimizer, learning_rate, epochs, batch_size, initial_weights):
@@ -1330,6 +1398,46 @@ class Multi_Layer_CNN:
         
         # Actual implementation requires re-creating layers and re-injecting params
         # This is outside the scope of the immediate fix.
+
+    def summary(self):
+        """
+        Displays a summary of the CNN model architecture using the introspection module.
+        
+        This method provides a comprehensive overview of the CNN structure,
+        showing convolutional layers, flatten operations, and dense layers with
+        their respective parameters and output shapes.
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        summary_text = ModelSummaryFormatter.format_summary(
+            layer_info, param_counts, memory_usage, configuration, "Multi_Layer_CNN"
+        )
+        print(summary_text)
+
+    def get_model_info(self):
+        """
+        Returns a dictionary containing detailed CNN model information using the introspection module.
+        
+        Returns:
+            dict: A dictionary containing:
+                - layer_info: List of dictionaries with layer details
+                - total_params: Total number of parameters
+                - memory_usage: Estimated memory usage in MB
+                - configuration: Model configuration details
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        return ModelSummaryFormatter.format_model_info(
+            layer_info, param_counts, memory_usage, configuration
+        )
 
 
 # --- END Multi_Layer_CNN ---
