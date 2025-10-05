@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pydeepflow.activations import activation, activation_derivative
 from pydeepflow.losses import get_loss_function, get_loss_derivative
-from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix,mean_absolute_error, mean_squared_error, r2_score
 from pydeepflow.device import Device
 from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
@@ -553,9 +553,20 @@ class Multi_Layer_ANN:
         if 'confusion_matrix' in metrics:
             num_classes = self.layers[-1]
             results['confusion_matrix'] = confusion_matrix(y_true_classes, y_pred_classes, num_classes)
+             
+        if 'mean_absolute_error' in metrics:
+          results['mean_absolute_error'] = mean_absolute_error(y, predictions)
+
+        if 'mean_squared_error' in metrics:
+          results['mean_squared_error'] = mean_squared_error(y, predictions)
+
+        if 'r2_score' in metrics:
+         results['r2_score'] = r2_score(y, predictions)
+
+
 
         return results
-
+       
     def load_checkpoint(self, checkpoint_path):
         print(f"Loading model weights from {checkpoint_path}")
         checkpoint = ModelCheckpoint(checkpoint_path)
@@ -965,6 +976,15 @@ class Multi_Layer_CNN:
 
         if 'f1_score' in metrics:
             results['f1_score'] = f1_score(y_true_classes, y_pred_classes)
+
+        if 'mean_absolute_error' in metrics:
+            results['mean_absolute_error'] = mean_absolute_error(y, predictions)
+
+        if 'mean_squared_error' in metrics:
+            results['mean_squared_error'] = mean_squared_error(y, predictions)
+
+        if 'r2_score' in metrics:
+            results['r2_score'] = r2_score(y, predictions)    
 
         return results # Removed confusion_matrix for simplification/dependency reasons
 
