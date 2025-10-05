@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import time
 from pydeepflow.activations import activation, activation_derivative
 from pydeepflow.losses import get_loss_function, get_loss_derivative
 from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix
@@ -11,11 +13,6 @@ from pydeepflow.batch_normalization import BatchNormalization
 from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
-import numpy as np
-import sys
-import time
-import time
-import sys
 
 # ====================================================================
 # IM2COL / COL2IM helper functions (USER'S TESTED WORKING VERSIONS)
