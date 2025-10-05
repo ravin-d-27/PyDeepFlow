@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix ,mean_absolute_error, mean_squared_error, r2_score
 
 class TestMetrics(unittest.TestCase):
 
@@ -27,6 +27,28 @@ class TestMetrics(unittest.TestCase):
         # FN = 1, TP = 3
         expected_matrix = np.array([[1, 1], [1, 3]])
         np.testing.assert_array_equal(confusion_matrix(self.y_true, self.y_pred, num_classes=2), expected_matrix)
+    
+    def setUp(self):
+        self.y_true = np.array([3, -0.5, 2, 7])
+        self.y_pred = np.array([2.5, 0.0, 2, 8])
+
+    def test_mean_absolute_error(self):
+        # MAE = ( |3-2.5| + |-0.5-0.0| + |2-2| + |7-8| ) / 4
+        #     = ( 0.5 + 0.5 + 0 + 1 ) / 4 = 2 / 4 = 0.5
+        self.assertAlmostEqual(mean_absolute_error(self.y_true, self.y_pred), 0.5)
+
+    def test_mean_squared_error(self):
+        # MSE = ( (3-2.5)^2 + (-0.5-0.0)^2 + (2-2)^2 + (7-8)^2 ) / 4
+        #     = ( 0.25 + 0.25 + 0 + 1 ) / 4 = 1.5 / 4 = 0.375
+        self.assertAlmostEqual(mean_squared_error(self.y_true, self.y_pred), 0.375)
+
+    def test_r2_score(self):
+        # ss_res = 1.5 (from MSE calculation)
+        # y_mean = (3 - 0.5 + 2 + 7) / 4 = 11.5 / 4 = 2.875
+        # ss_tot = (3-2.875)^2 + (-0.5-2.875)^2 + (2-2.875)^2 + (7-2.875)^2
+        #        = 0.015625 + 11.390625 + 0.765625 + 17.015625 = 29.1875
+        # R^2 = 1 - (1.5 / 29.1875) = 1 - 0.051389... ≈ 0.9486
+        self.assertAlmostEqual(r2_score(self.y_true, self.y_pred), 0.94861051, places=5)
 
 if __name__ == '__main__':
     unittest.main()

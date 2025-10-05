@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import time
 from pydeepflow.activations import activation, activation_derivative
 from pydeepflow.losses import get_loss_function, get_loss_derivative
-from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix,mean_absolute_error, mean_squared_error, r2_score
 from pydeepflow.device import Device
 from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
@@ -12,11 +14,6 @@ from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
 from pydeepflow.introspection import create_introspector, ModelSummaryFormatter
-import numpy as np
-import sys
-import time
-import time
-import sys
 
 # ====================================================================
 # IM2COL / COL2IM helper functions (USER'S TESTED WORKING VERSIONS)
@@ -596,9 +593,20 @@ class Multi_Layer_ANN:
         if 'confusion_matrix' in metrics:
             num_classes = self.layers[-1]
             results['confusion_matrix'] = confusion_matrix(y_true_classes, y_pred_classes, num_classes)
+             
+        if 'mean_absolute_error' in metrics:
+          results['mean_absolute_error'] = mean_absolute_error(y, predictions)
+
+        if 'mean_squared_error' in metrics:
+          results['mean_squared_error'] = mean_squared_error(y, predictions)
+
+        if 'r2_score' in metrics:
+         results['r2_score'] = r2_score(y, predictions)
+
+
 
         return results
-
+       
     def load_checkpoint(self, checkpoint_path):
         """
         Loads model weights and biases from a checkpoint file.
@@ -1373,6 +1381,15 @@ class Multi_Layer_CNN:
 
         if 'f1_score' in metrics:
             results['f1_score'] = f1_score(y_true_classes, y_pred_classes)
+
+        if 'mean_absolute_error' in metrics:
+            results['mean_absolute_error'] = mean_absolute_error(y, predictions)
+
+        if 'mean_squared_error' in metrics:
+            results['mean_squared_error'] = mean_squared_error(y, predictions)
+
+        if 'r2_score' in metrics:
+            results['r2_score'] = r2_score(y, predictions)    
 
         return results # Removed confusion_matrix for simplification/dependency reasons
 
