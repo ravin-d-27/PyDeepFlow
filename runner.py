@@ -33,8 +33,8 @@ if __name__ == "__main__":
     use_gpu = True if use_gpu_input == 'y' else False
 
     # Define the architecture of the network
-    hidden_layers = [5, 5]  # Example: two hidden layers with 5 neurons each
-    activations = ['relu', 'relu']  # ReLU activations for the hidden layers
+    hidden_layers = [10, 10, 3]  # Two hidden layers with 10 neurons each, and output layer with 3 neurons
+    activations = ['relu', 'relu', 'softmax']  # ReLU for hidden layers, softmax for output layer
 
     # Initialize the CrossValidator
     k_folds = 10 # Set the number of folds for cross-validation
