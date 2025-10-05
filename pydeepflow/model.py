@@ -1,4 +1,6 @@
 import numpy as np
+import sys
+import time
 import matplotlib.pyplot as plt
 from pydeepflow.activations import activation, activation_derivative
 from pydeepflow.losses import get_loss_function, get_loss_derivative
@@ -9,13 +11,8 @@ from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.cross_validator import CrossValidator
 from pydeepflow.batch_normalization import BatchNormalization
 from pydeepflow.weight_initialization import get_weight_initializer
-from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
-import numpy as np
-import sys
-import time
-import time
-import sys
+from tqdm import tqdm
 
 # ====================================================================
 # IM2COL / COL2IM helper functions (USER'S TESTED WORKING VERSIONS)
@@ -70,15 +67,20 @@ def im2col_indices(X, filter_height, filter_width, padding=0, stride=1):
     H_out = (H + 2 * padding - Fh) // stride + 1
     W_out = (W + 2 * padding - Fw) // stride + 1
 
-    # Create patches using broadcasting
+    # Create patches using proper indexing
     X_col = np.zeros((N, H_out, W_out, Fh * Fw * C))
     
+    col_idx = 0
     for y in range(Fh):
         y_max = y + stride * H_out
         for x in range(Fw):
             x_max = x + stride * W_out
-            # This indexing relies on the previously created index structure, though implemented via loops here
-            X_col[:, :, :, y * Fw + x::Fh * Fw] = X_padded[:, y:y_max:stride, x:x_max:stride, :]
+            # Extract patch for all channels at position (y, x) in the filter
+            # Shape of patch: (N, H_out, W_out, C)
+            patch = X_padded[:, y:y_max:stride, x:x_max:stride, :]
+            # Place in correct column positions for all channels
+            X_col[:, :, :, col_idx * C:(col_idx + 1) * C] = patch
+            col_idx += 1
     
     # Reshape to (N * H_out * W_out, Fh * Fw * C)
     X_col = X_col.reshape(N * H_out * W_out, -1)
@@ -107,14 +109,16 @@ def col2im_indices(cols, X_shape, filter_height, filter_width, padding=0, stride
     cols_reshaped = cols.reshape(N, H_out, W_out, Fh * Fw * C)
 
     # Scatter-add contributions back to input positions
+    col_idx = 0
     for y in range(Fh):
         y_max = y + stride * H_out
         for x in range(Fw):
             x_max = x + stride * W_out
-            if padding > 0:
-                X_grad[:, y:y_max:stride, x:x_max:stride, :] += cols_reshaped[:, :, :, y * Fw + x::Fh * Fw]
-            else:
-                X_grad[:, y:y_max:stride, x:x_max:stride, :] += cols_reshaped[:, :, :, y * Fw + x::Fh * Fw]
+            # Extract gradients for this filter position across all channels
+            grad_patch = cols_reshaped[:, :, :, col_idx * C:(col_idx + 1) * C]
+            # Accumulate to the correct positions in the gradient
+            X_grad[:, y:y_max:stride, x:x_max:stride, :] += grad_patch
+            col_idx += 1
 
     # Remove padding if it was added
     if padding > 0:
@@ -154,8 +158,17 @@ class ConvLayer:
         N, H, W, C = X.shape
         Fh, Fw = self.Fh, self.Fw
 
+        # Validate input channels match expected
+        if C != self.in_channels:
+            raise ValueError(f"Expected {self.in_channels} input channels, got {C}")
+
         H_out = (H + 2 * self.padding - Fh) // self.stride + 1
         W_out = (W + 2 * self.padding - Fw) // self.stride + 1
+
+        # Validate output dimensions are positive
+        if H_out <= 0 or W_out <= 0:
+            raise ValueError(f"Invalid output dimensions H_out={H_out}, W_out={W_out}. "
+                           f"Check filter size, stride, and padding settings.")
 
         # Convert input to columns
         X_col = im2col_indices(X, Fh, Fw, self.padding, self.stride) 
