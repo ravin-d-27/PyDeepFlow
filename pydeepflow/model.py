@@ -11,11 +11,10 @@ from pydeepflow.batch_normalization import BatchNormalization
 from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
+from pydeepflow.validation import ModelValidator
 import numpy as np
 import sys
 import time
-import time
-import sys
 
 # ====================================================================
 # IM2COL / COL2IM helper functions (USER'S TESTED WORKING VERSIONS)
@@ -276,8 +275,21 @@ class Multi_Layer_ANN:
             ValueError: If the number of activation functions does not match the number of hidden layers.
         """
         # Validate inputs before proceeding with initialization
-        self._validate_inputs(X_train, Y_train, hidden_layers, activations, loss, 
-                             l2_lambda, dropout_rate, optimizer, learning_rate, epochs, batch_size, initial_weights)
+        validator = ModelValidator(device=None)  # Device not needed for validation
+        validator.validate_training_data(X_train, "X_train", max_dimensions=2)
+        validator.validate_training_data(Y_train, "Y_train", max_dimensions=2)
+        validator.validate_data_compatibility(X_train, Y_train)
+        validator.validate_hidden_layers(hidden_layers)
+        validator.validate_activations(activations, hidden_layers)
+        validator.validate_loss_function(loss)
+        validator.validate_regularization_params(l2_lambda, dropout_rate)
+        validator.validate_optimizer(optimizer)
+        validator.validate_initial_weights(initial_weights)
+        
+        # Validate and adjust batch_size
+        self.batch_size = validator.validate_training_hyperparameters(
+            learning_rate, epochs, batch_size, X_train
+        )
         
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
