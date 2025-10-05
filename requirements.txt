@@ -5,3 +5,4 @@ jupyter
 tqdm
 colorama
 matplotlib
+pytest
