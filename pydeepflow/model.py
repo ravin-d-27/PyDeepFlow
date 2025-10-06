@@ -1011,50 +1011,68 @@ class Multi_Layer_ANN:
 
 class Plotting_Utils:
     def plot_training_history(self, history, metrics=('loss', 'accuracy'), figure='history.png'):
+        """
+        Plot training history using a non-interactive backend so this works in
+        headless environments (CI, containers, servers) where GUI backends like
+        GTK are unavailable.
+        """
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
         num_metrics = len(metrics)
-        fig, ax = plt.subplots(1, num_metrics, figsize=(6 * num_metrics, 5))
+        fig = Figure(figsize=(6 * num_metrics, 5))
+        canvas = FigureCanvas(fig)
 
         if num_metrics == 1:
-            ax = [ax]
+            ax = [fig.add_subplot(1, 1, 1)]
+        else:
+            ax = [fig.add_subplot(1, num_metrics, i + 1) for i in range(num_metrics)]
 
         for i, metric in enumerate(metrics):
-            ax[i].plot(history[f'train_{metric}'], label=f'Train {metric.capitalize()}')
+            ax[i].plot(history.get(f'train_{metric}', []), label=f'Train {metric.capitalize()}')
             if f'val_{metric}' in history:
-                ax[i].plot(history[f'val_{metric}'], label=f'Validation {metric.capitalize()}')
+                ax[i].plot(history.get(f'val_{metric}', []), label=f'Validation {metric.capitalize()}')
             ax[i].set_title(f"{metric.capitalize()} over Epochs")
             ax[i].set_xlabel("Epochs")
             ax[i].set_ylabel(metric.capitalize())
             ax[i].legend()
 
-        plt.savefig(figure)
-        plt.tight_layout()
-        plt.show()
+        fig.tight_layout()
+        fig.savefig(figure)
+        # Do not call plt.show() — this avoids GUI backend imports in headless envs
 
     def plot_learning_curve(self, train_sizes, train_scores, val_scores, figure='learning_curve.png'):
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)
         val_scores_mean = np.mean(val_scores, axis=1)
         val_scores_std = np.std(val_scores, axis=1)
 
-        plt.figure()
-        plt.title("Learning Curve")
-        plt.xlabel("Training examples")
-        plt.ylabel("Score")
-        plt.grid()
+        fig = Figure(figsize=(8, 6))
+        canvas = FigureCanvas(fig)
+        ax = fig.add_subplot(1, 1, 1)
 
-        plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+        ax.set_title("Learning Curve")
+        ax.set_xlabel("Training examples")
+        ax.set_ylabel("Score")
+        ax.grid()
+
+        ax.fill_between(train_sizes, train_scores_mean - train_scores_std,
                              train_scores_mean + train_scores_std, alpha=0.1,
                              color="r")
-        plt.fill_between(train_sizes, val_scores_mean - val_scores_std,
+        ax.fill_between(train_sizes, val_scores_mean - val_scores_std,
                              val_scores_mean + val_scores_std, alpha=0.1, color="g")
-        plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+        ax.plot(train_sizes, train_scores_mean, 'o-', color="r",
                      label="Training score")
-        plt.plot(train_sizes, val_scores_mean, 'o-', color="g",
+        ax.plot(train_sizes, val_scores_mean, 'o-', color="g",
                      label="Cross-validation score")
 
-        plt.legend(loc="best")
-        plt.savefig(figure)
-        plt.show()
+        ax.legend(loc="best")
+        fig.tight_layout()
+        fig.savefig(figure)
+        # Do not call plt.show() to avoid GUI backend usage
 
 
 # ====================================================================
