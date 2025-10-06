@@ -102,10 +102,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
+from pydeeepflow.datasets import load_iris
 
 # Load Iris dataset
-url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
-df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
+df = load_iris(as_frame=True)
 
 # Data preprocessing
 df['species'] = df['species'].astype('category').cat.codes
