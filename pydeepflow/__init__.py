@@ -9,10 +9,21 @@ from .early_stopping import EarlyStopping
 from .cross_validator import CrossValidator
 from .batch_normalization import BatchNormalization
 from .gridSearch import GridSearchCV
-from .weight_initialization import get_weight_initializer
-from .model import ConvLayer
-from .model import Flatten
-from .model import Multi_Layer_CNN 
+from .validation import ModelValidator
+from .introspection import ANNIntrospector, CNNIntrospector, ModelSummaryFormatter, create_introspector
+
+# Try to import optional components
+try:
+    from .weight_initialization import get_weight_initializer
+    _has_weight_init = True
+except ImportError:
+    _has_weight_init = False
+
+try:
+    from .model import ConvLayer, Flatten, Multi_Layer_CNN
+    _has_cnn = True
+except ImportError:
+    _has_cnn = False
 
 __all__ = [
     "activation",
@@ -29,8 +40,16 @@ __all__ = [
     "CrossValidator",  
     "BatchNormalization",
     "GridSearchCV",
-    "get_weight_initializer",
-    "ConvLayer",
-    "Flatten",
-    "Multi_Layer_CNN",
+    "ModelValidator",
+    "ModelIntrospector",
+    "ANNIntrospector", 
+    "CNNIntrospector",
+    "create_introspector",
 ]
+
+# Add optional components to __all__ if available
+if _has_weight_init:
+    __all__.append("get_weight_initializer")
+
+if _has_cnn:,
+    __all__.extend(["ConvLayer", "Flatten", "Multi_Layer_CNN"])

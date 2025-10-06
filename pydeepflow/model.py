@@ -15,8 +15,7 @@ from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
 from pydeepflow.validation import ModelValidator
 import numpy as np
-import sys
-import time
+from pydeepflow.introspection import create_introspector, ModelSummaryFormatter
 
 # ====================================================================
 # IM2COL / COL2IM helper functions (USER'S TESTED WORKING VERSIONS)
@@ -292,6 +291,28 @@ class Multi_Layer_ANN:
         self.batch_size = validator.validate_training_hyperparameters(
             learning_rate, epochs, batch_size, X_train
         )
+        # Validate inputs using the ModelValidator utility
+        from pydeepflow.validation import ModelValidator
+        validator = ModelValidator()
+        
+        # Validate training data
+        validator.validate_training_data(X_train, "X_train")
+        validator.validate_training_data(Y_train, "Y_train")
+        validator.validate_data_compatibility(X_train, Y_train)
+        
+        # Validate architecture
+        validator.validate_hidden_layers(hidden_layers)
+        validator.validate_activations(activations, hidden_layers)
+        validator.validate_loss_function(loss)
+        
+        # Validate parameters
+        validator.validate_regularization_params(l2_lambda, dropout_rate)
+        validator.validate_optimizer(optimizer)
+        
+        # Validate hyperparameters and get adjusted batch_size
+        adjusted_batch_size = validator.validate_training_hyperparameters(
+            learning_rate, epochs, batch_size, X_train)
+        self.batch_size = adjusted_batch_size
         
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
@@ -651,56 +672,425 @@ class Multi_Layer_ANN:
         self.output_activation = model_data['output_activation']
         print(f"Model loaded from {file_path}")
 
+    def summary(self):
+        """
+        Displays a summary of the model architecture using the introspection module.
+        
+        This method provides a comprehensive overview of the neural network structure,
+        similar to Keras model.summary(), showing:
+        - Layer-by-layer breakdown with input/output shapes
+        - Parameter count for each layer
+        - Total trainable parameters
+        - Estimated memory usage
+        - Model configuration details
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        summary_text = ModelSummaryFormatter.format_summary(
+            layer_info, param_counts, memory_usage, configuration, "Multi_Layer_ANN"
+        )
+        print(summary_text)
+
+    def get_model_info(self):
+        """
+        Returns a dictionary containing detailed model information using the introspection module.
+        
+        This method provides programmatic access to model architecture details,
+        useful for automated analysis or integration with other tools.
+        
+        Returns:
+            dict: A dictionary containing:
+                - layer_info: List of dictionaries with layer details
+                - total_params: Total number of parameters
+                - memory_usage: Estimated memory usage in MB
+                - configuration: Model configuration details
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        return ModelSummaryFormatter.format_model_info(
+            layer_info, param_counts, memory_usage, configuration
+        )
+        return introspector.get_model_info()
+
+    def _validate_inputs(self, X_train, Y_train, hidden_layers, activations, loss, 
+                        l2_lambda, dropout_rate, optimizer, learning_rate, epochs, batch_size, initial_weights):
+        """
+        Comprehensive validation of all input parameters for model initialization.
+        
+        Args:
+        X_train (np.ndarray): Training input data, shape (n_samples, n_features)
+        Y_train (np.ndarray): Training target data, shape (n_samples, n_outputs)
+        hidden_layers (list[int]): List of hidden layer sizes, all positive integers
+        activations (list[str]): List of activation function names (e.g., 'relu', 'sigmoid')
+        loss (str): Loss function name (e.g., 'mse', 'cross_entropy')
+        l2_lambda (float): L2 regularization parameter, non-negative
+        dropout_rate (float): Dropout rate, value between 0.0 and 1.0
+        optimizer (str): Optimizer name (e.g., 'adam', 'sgd')
+        learning_rate (float): Learning rate for optimization, positive value
+        epochs (int): Number of training epochs, positive integer
+        batch_size (int): Batch size for training, positive integer
+        initial_weights (str): Weight initialization strategy (e.g., 'auto', 'he', 'xavier')
+
+            
+        Raises:
+            ValueError: If any input parameter is invalid
+            TypeError: If input types are incorrect
+        """
+        # Validate X_train
+        self._validate_training_data(X_train, "X_train")
+        
+        # Validate Y_train  
+        self._validate_training_data(Y_train, "Y_train")
+        
+        # Validate data compatibility
+        self._validate_data_compatibility(X_train, Y_train)
+        
+        # Validate hidden layers
+        self._validate_hidden_layers(hidden_layers)
+        
+        # Validate activations
+        self._validate_activations(activations, hidden_layers)
+        
+        # Validate loss function
+        self._validate_loss_function(loss)
+        
+        # Validate regularization parameters
+        self._validate_regularization_params(l2_lambda, dropout_rate)
+        
+        # Validate optimizer
+        self._validate_optimizer(optimizer)
+
+        # Validate the training parameters
+        self._validate_training_hyperparameters(learning_rate, epochs, batch_size, X_train)
+        
+        # Validate initial weights parameter
+        self._validate_initial_weights(initial_weights)
+
+    def _validate_training_data(self, data, data_name):
+        """Validate training data (X_train or Y_train)."""
+        # Check if data exists
+        if data is None:
+            raise ValueError(f"{data_name} cannot be None")
+            
+        # Convert to numpy array if not already
+        try:
+            data_array = np.asarray(data)
+        except Exception as e:
+            raise TypeError(f"{data_name} must be convertible to numpy array. Error: {e}")
+        
+        # Check if empty
+        if data_array.size == 0:
+            raise ValueError(f"{data_name} cannot be empty")
+            
+        # Check for valid dimensions (1D or 2D)
+        if data_array.ndim == 0:
+            raise ValueError(f"{data_name} must be at least 1_dimensional")
+        elif data_array.ndim > 2:
+            raise ValueError(f"{data_name} must be 1D or 2D array, got {data_array.ndim}D")
+            
+        # Check for numeric data
+        if not np.issubdtype(data_array.dtype, np.number):
+            raise TypeError(f"{data_name} must contain numeric data, got dtype: {data_array.dtype}")
+            
+        # Check for NaN values
+        if np.isnan(data_array).any():
+            nan_indices = np.where(np.isnan(data_array))
+            if len(nan_indices[0]) <= 10:  # Show first 10 NaN locations
+                locations = list(zip(*nan_indices))
+                raise ValueError(f"{data_name} contains NaN values at indices: {locations}")
+            else:
+                raise ValueError(f"{data_name} contains {np.isnan(data_array).sum()} NaN values")
+                
+        # Check for infinite values
+        if np.isinf(data_array).any():
+            inf_indices = np.where(np.isinf(data_array))
+            if len(inf_indices[0]) <= 10:  # Show first 10 inf locations
+                locations = list(zip(*inf_indices))
+                raise ValueError(f"{data_name} contains infinite values at indices: {locations}")
+            else:
+                raise ValueError(f"{data_name} contains {np.isinf(data_array).sum()} infinite values")
+
+    def _validate_data_compatibility(self, X_train, Y_train):
+        """Validate that X_train and Y_train are compatible."""
+        X_array = np.asarray(X_train)
+        Y_array = np.asarray(Y_train)
+        
+        # Check sample count compatibility
+        if X_array.shape[0] != Y_array.shape[0]:
+            raise ValueError(f"X_train and Y_train must have the same number of samples. "
+                           f"Got X_train: {X_array.shape[0]}, Y_train: {Y_array.shape[0]}")
+                           
+        # Check minimum sample count
+        if X_array.shape[0] < 2:
+            raise ValueError(f"Need at least 2 samples for training, got {X_array.shape[0]}")
+            
+        # Validate feature count
+        if X_array.ndim == 2 and X_array.shape[1] == 0:
+            raise ValueError("X_train must have at least 1 feature")
+            
+        # Validate target format for classification
+        if Y_array.ndim == 2:
+            if Y_array.shape[1] == 0:
+                raise ValueError("Y_train must have at least 1 output dimension")
+            # Check for valid one-hot encoding
+            if Y_array.shape[1] > 1:
+                # Should be one-hot encoded for multi-class
+                row_sums = np.sum(Y_array, axis=1)
+                if not np.allclose(row_sums, 1.0):
+                    raise ValueError("For multi-class classification, Y_train should be one-hot encoded "
+                                   "(each row should sum to 1)")
+
+    def _validate_hidden_layers(self, hidden_layers):
+        """Validate hidden layer configuration."""
+        if not isinstance(hidden_layers, (list, tuple)):
+            raise TypeError(f"hidden_layers must be a list or tuple, got {type(hidden_layers)}")
+            
+        if len(hidden_layers) == 0:
+            raise ValueError("hidden_layers cannot be empty. Specify at least one hidden layer.")
+            
+        for i, layer_size in enumerate(hidden_layers):
+            if not isinstance(layer_size, (int, np.integer)):
+                raise TypeError(f"All hidden layer sizes must be integers. "
+                              f"Layer {i} has type {type(layer_size)}")
+                              
+            if layer_size <= 0:
+                raise ValueError(f"All hidden layer sizes must be positive integers. "
+                               f"Layer {i} has size {layer_size}")
+                               
+            if layer_size > 10000:  # Reasonable upper limit
+                raise ValueError(f"Hidden layer size seems too large: {layer_size} neurons in layer {i}. "
+                               f"Consider using smaller layers for better performance.")
+
+    def _validate_activations(self, activations, hidden_layers):
+        """Validate activation functions."""
+        if not isinstance(activations, (list, tuple)):
+            raise TypeError(f"activations must be a list or tuple, got {type(activations)}")
+            
+        if len(activations) != len(hidden_layers):
+            raise ValueError(f"Number of activation functions ({len(activations)}) must match "
+                           f"number of hidden layers ({len(hidden_layers)})")
+                           
+        # Valid activation functions (from activations.py)
+        valid_activations = {
+            'relu', 'leaky_relu', 'prelu', 'elu', 'gelu', 'swish', 'selu',
+            'softplus', 'mish', 'rrelu', 'hardswish', 'sigmoid', 'softsign',
+            'tanh', 'hardtanh', 'hardsigmoid', 'tanhshrink', 'softshrink',
+            'hardshrink', 'softmax'
+        }
+        
+        for i, activation in enumerate(activations):
+            if not isinstance(activation, str):
+                raise TypeError(f"Activation functions must be strings. "
+                              f"Activation {i} has type {type(activation)}")
+                              
+            if activation not in valid_activations:
+                raise ValueError(f"Unsupported activation function '{activation}' at index {i}. "
+                               f"Supported activations: {sorted(valid_activations)}")
+
+    def _validate_loss_function(self, loss):
+        """Validate loss function."""
+        if not isinstance(loss, str):
+            raise TypeError(f"Loss function must be a string, got {type(loss)}")
+            
+        # Valid loss functions (from losses.py)
+        valid_losses = {'binary_crossentropy', 'mse', 'categorical_crossentropy', 'hinge', 'huber'}
+        
+        if loss not in valid_losses:
+            raise ValueError(f"Unsupported loss function '{loss}'. "
+                           f"Supported losses: {sorted(valid_losses)}")
+
+    def _validate_regularization_params(self, l2_lambda, dropout_rate):
+        """Validate regularization parameters."""
+        # Validate L2 lambda
+        if not isinstance(l2_lambda, (int, float, np.number)):
+            raise TypeError(f"l2_lambda must be a number, got {type(l2_lambda)}")
+            
+        if l2_lambda < 0:
+            raise ValueError(f"l2_lambda must be non-negative, got {l2_lambda}")
+            
+        if l2_lambda > 1:
+            raise ValueError(f"l2_lambda seems too large: {l2_lambda}. "
+                           f"Typical values are between 0 and 0.1")
+            
+        # Validate dropout rate
+        if not isinstance(dropout_rate, (int, float, np.number)):
+            raise TypeError(f"dropout_rate must be a number, got {type(dropout_rate)}")
+            
+        if dropout_rate < 0 or dropout_rate >= 1:
+            raise ValueError(f"dropout_rate must be in range [0, 1), got {dropout_rate}")
+
+    def _validate_optimizer(self, optimizer):
+        """Validate optimizer."""
+        # Allow both string names and optimizer objects for backward compatibility
+        if isinstance(optimizer, str):
+            valid_optimizers = {'sgd', 'adam', 'rmsprop'}
+            if optimizer not in valid_optimizers:
+                raise ValueError(f"Unsupported optimizer '{optimizer}'. "
+                               f"Supported optimizers: {sorted(valid_optimizers)}")
+        else:
+            # Check if it's a valid optimizer object
+            from pydeepflow.optimizers import Adam, RMSprop
+            if not isinstance(optimizer, (Adam, RMSprop)) and optimizer != 'sgd':
+                raise TypeError(f"optimizer must be a string or valid optimizer object, got {type(optimizer)}")
+                # Note: 'sgd' is handled as string since there's no SGD class
+
+    def _validate_training_hyperparameters(self, learning_rate, epochs, batch_size, X_train):
+        """Validate training hyperparameters (learning rate, epochs, batch size)."""
+        
+        # Validate learning rate
+        if not isinstance(learning_rate, (int, float, np.number)):
+            raise TypeError(f"learning_rate must be a number, got {type(learning_rate)}")
+            
+        if learning_rate <= 0:
+            raise ValueError(f"learning_rate must be positive, got {learning_rate}")
+            
+        if learning_rate > 1.0:
+            raise ValueError(f"learning_rate seems too large: {learning_rate}. "
+                        f"Typical values are between 0.0001 and 0.1")
+        
+        if learning_rate < 1e-8:
+            raise ValueError(f"learning_rate seems too small: {learning_rate}. "
+                        f"Values below 1e-8 may prevent the model from learning effectively")
+            
+        # Validate epochs
+        if not isinstance(epochs, (int, np.integer)):
+            raise TypeError(f"epochs must be an integer, got {type(epochs)}")
+            
+        if epochs <= 0:
+            raise ValueError(f"epochs must be positive, got {epochs}")
+            
+        if epochs > 10000:
+            raise ValueError(f"epochs seems too large: {epochs}. "
+                        f"Training for more than 10000 epochs is rarely necessary. "
+                        f"Consider using early stopping instead")
+            
+        # Validate batch size
+        if not isinstance(batch_size, (int, np.integer)):
+            raise TypeError(f"batch_size must be an integer, got {type(batch_size)}")
+            
+        if batch_size <= 0:
+            raise ValueError(f"batch_size must be positive, got {batch_size}")
+            
+        # Get number of training samples
+        X_array = np.asarray(X_train)
+        n_samples = X_array.shape[0]
+        
+        # Auto-adjust batch_size if larger than dataset
+        if batch_size > n_samples:
+            import warnings
+            warnings.warn(
+                f"batch_size ({batch_size}) is larger than the number of training samples ({n_samples}). "
+                f"Automatically adjusting batch_size to {n_samples}.",
+                UserWarning
+            )
+            # Store adjusted batch size
+            self.batch_size = n_samples
+        else:
+            self.batch_size = batch_size
+            
+        if batch_size > 1024:
+            raise ValueError(f"batch_size seems too large: {batch_size}. "
+                        f"Typical values are 16, 32, 64, 128, 256, or 512. "
+                        f"Large batch sizes may cause memory issues and poor generalization")
+            
+        # Warning for very small batch sizes (not an error, but good to know)
+        if batch_size == 1 and n_samples >=100:
+            import warnings
+            warnings.warn(
+                f"batch_size of 1 (online learning) with {n_samples} samples "
+                f"may result in very slow and unstable training. "
+                f"Consider using a larger batch size like 16, 32, or 64.",
+                UserWarning,
+                stacklevel=3  # Adjust stacklevel to point to the right caller
+            )
+
+    def _validate_initial_weights(self, initial_weights):
+        """Validate initial weights parameter."""
+        if not isinstance(initial_weights, str):
+            raise TypeError(f"initial_weights must be a string, got {type(initial_weights)}")
+            
+        valid_initial_weights = {'auto', 'he', 'xavier', 'glorot', 'lecun', 'random'}
+        
+        if initial_weights not in valid_initial_weights:
+            raise ValueError(f"Unsupported initial_weights '{initial_weights}'. "
+                           f"Supported values: {sorted(valid_initial_weights)}")
+
 # ====================================================================
 # Plotting utilities (UNMODIFIED)
 # ====================================================================
 
 class Plotting_Utils:
     def plot_training_history(self, history, metrics=('loss', 'accuracy'), figure='history.png'):
+        """
+        Plot training history using a non-interactive backend so this works in
+        headless environments (CI, containers, servers) where GUI backends like
+        GTK are unavailable.
+        """
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
         num_metrics = len(metrics)
-        fig, ax = plt.subplots(1, num_metrics, figsize=(6 * num_metrics, 5))
+        fig = Figure(figsize=(6 * num_metrics, 5))
+        canvas = FigureCanvas(fig)
 
         if num_metrics == 1:
-            ax = [ax]
+            ax = [fig.add_subplot(1, 1, 1)]
+        else:
+            ax = [fig.add_subplot(1, num_metrics, i + 1) for i in range(num_metrics)]
 
         for i, metric in enumerate(metrics):
-            ax[i].plot(history[f'train_{metric}'], label=f'Train {metric.capitalize()}')
+            ax[i].plot(history.get(f'train_{metric}', []), label=f'Train {metric.capitalize()}')
             if f'val_{metric}' in history:
-                ax[i].plot(history[f'val_{metric}'], label=f'Validation {metric.capitalize()}')
+                ax[i].plot(history.get(f'val_{metric}', []), label=f'Validation {metric.capitalize()}')
             ax[i].set_title(f"{metric.capitalize()} over Epochs")
             ax[i].set_xlabel("Epochs")
             ax[i].set_ylabel(metric.capitalize())
             ax[i].legend()
 
-        plt.savefig(figure)
-        plt.tight_layout()
-        plt.show()
+        fig.tight_layout()
+        fig.savefig(figure)
+        # Do not call plt.show() — this avoids GUI backend imports in headless envs
 
     def plot_learning_curve(self, train_sizes, train_scores, val_scores, figure='learning_curve.png'):
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)
         val_scores_mean = np.mean(val_scores, axis=1)
         val_scores_std = np.std(val_scores, axis=1)
 
-        plt.figure()
-        plt.title("Learning Curve")
-        plt.xlabel("Training examples")
-        plt.ylabel("Score")
-        plt.grid()
+        fig = Figure(figsize=(8, 6))
+        canvas = FigureCanvas(fig)
+        ax = fig.add_subplot(1, 1, 1)
 
-        plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+        ax.set_title("Learning Curve")
+        ax.set_xlabel("Training examples")
+        ax.set_ylabel("Score")
+        ax.grid()
+
+        ax.fill_between(train_sizes, train_scores_mean - train_scores_std,
                              train_scores_mean + train_scores_std, alpha=0.1,
                              color="r")
-        plt.fill_between(train_sizes, val_scores_mean - val_scores_std,
+        ax.fill_between(train_sizes, val_scores_mean - val_scores_std,
                              val_scores_mean + val_scores_std, alpha=0.1, color="g")
-        plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+        ax.plot(train_sizes, train_scores_mean, 'o-', color="r",
                      label="Training score")
-        plt.plot(train_sizes, val_scores_mean, 'o-', color="g",
+        ax.plot(train_sizes, val_scores_mean, 'o-', color="g",
                      label="Cross-validation score")
 
-        plt.legend(loc="best")
-        plt.savefig(figure)
-        plt.show()
+        ax.legend(loc="best")
+        fig.tight_layout()
+        fig.savefig(figure)
+        # Do not call plt.show() to avoid GUI backend usage
 
 
 # ====================================================================
@@ -1078,6 +1468,46 @@ class Multi_Layer_CNN:
         
         # Actual implementation requires re-creating layers and re-injecting params
         # This is outside the scope of the immediate fix.
+
+    def summary(self):
+        """
+        Displays a summary of the CNN model architecture using the introspection module.
+        
+        This method provides a comprehensive overview of the CNN structure,
+        showing convolutional layers, flatten operations, and dense layers with
+        their respective parameters and output shapes.
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        summary_text = ModelSummaryFormatter.format_summary(
+            layer_info, param_counts, memory_usage, configuration, "Multi_Layer_CNN"
+        )
+        print(summary_text)
+
+    def get_model_info(self):
+        """
+        Returns a dictionary containing detailed CNN model information using the introspection module.
+        
+        Returns:
+            dict: A dictionary containing:
+                - layer_info: List of dictionaries with layer details
+                - total_params: Total number of parameters
+                - memory_usage: Estimated memory usage in MB
+                - configuration: Model configuration details
+        """
+        introspector = create_introspector(self)
+        layer_info = introspector.get_layer_info()
+        param_counts = introspector.calculate_parameters()
+        memory_usage = introspector.estimate_memory_usage()
+        configuration = introspector.get_model_configuration()
+        
+        return ModelSummaryFormatter.format_model_info(
+            layer_info, param_counts, memory_usage, configuration
+        )
 
 
 # --- END Multi_Layer_CNN ---
