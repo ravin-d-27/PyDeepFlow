@@ -34,6 +34,11 @@ setup(
         "gpu": ["cupy>=9.6.0"],  # Optional GPU support
         "testing": ["pytest>=6.2.5"],  # Dependencies for testing
     },
+    entry_points={
+        'console_scripts': [
+            'pydeepflow-cli=pydeepflow.cli:main',  # CLI tool if applicable
+        ],
+    },
     keywords="deep-learning artificial-intelligence neural-networks tensorflow pytorch",  # Add relevant keywords
     license="MIT",
     project_urls={
