@@ -2,6 +2,7 @@ import numpy as np
 from itertools import product
 from pydeepflow.cross_validator import CrossValidator
 
+
 class GridSearchCV:
     def __init__(self, model_class, param_grid, scoring='accuracy', cv=3):
         """
@@ -19,6 +20,24 @@ class GridSearchCV:
         self.cv = cv
         self.best_params = None
         self.best_score = -np.inf
+
+    def _get_score(self, results):
+        """
+        Extract the scoring metric from the model's evaluation results.
+
+        Parameters:
+            results (dict): Evaluation results returned by the model.
+
+        Returns:
+            float: The computed score for the specified scoring metric.
+        """
+        if self.scoring == 'accuracy':
+            return results['accuracy']
+        elif self.scoring == 'loss':
+            # Lower loss is better, so negate it for consistency
+            return -results['loss']
+        else:
+            raise ValueError(f"Unsupported scoring method: {self.scoring}")
 
     def fit(self, X, y):
         """
@@ -49,15 +68,10 @@ class GridSearchCV:
                 model.fit(epochs=10)
                 
                 results = model.evaluate(X_val, y_val, metrics=[self.scoring])
-                
-                if self.scoring == 'accuracy':
-                    fold_scores.append(results['accuracy'])
-                elif self.scoring == 'loss':
-                    fold_scores.append(-results['loss'])  # Assuming lower loss is better
+                fold_scores.append(self._get_score(results))
 
             avg_score = np.mean(fold_scores)
-            print(f"Average score for parameters {params_dict}: {avg_score:.4f}")
-            print()
+            print(f"Average score for parameters {params_dict}: {avg_score:.4f}\n")
             
             # Update best score and parameters if applicable
             if avg_score > self.best_score:
