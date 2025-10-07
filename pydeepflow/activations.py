@@ -56,8 +56,11 @@ def _prelu_derivative(x, device, alpha):
 def _elu_derivative(x, device, alpha):
     return device.where(x > 0, 1, alpha * device.exp(x))
 def _gelu_derivative(x, device, alpha):
-    return 0.5 * (1 + device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x ** 3))) + \
-            0.5 * x * (1 - device.tanh(device.sqrt(2 / device.pi) * (x + 0.044715 * x ** 3)) ** 2)
+    Z = device.sqrt(2 / np.pi) * (x + 0.044715 * (x ** 3))
+    dZ_dx = device.sqrt(2 / np.pi) * (1 + 3 * 0.044715 * (x ** 2))
+    tanh_Z = device.tanh(Z)
+    sech_Z_sq = 1 - tanh_Z**2
+    return 0.5 * (1 + tanh_Z) + 0.5 * x * sech_Z_sq * dZ_dx
 def _swish_derivative(x, device, alpha):
     sigma = 1 / (1 + device.exp(-x))
     return sigma + x * sigma * (1 - sigma)
