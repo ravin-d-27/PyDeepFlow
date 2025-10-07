@@ -75,3 +75,66 @@ def confusion_matrix(y_true, y_pred, num_classes):
     for i in range(len(y_true)):
         matrix[y_true[i], y_pred[i]] += 1
     return matrix
+
+def mean_absolute_error(y_true, y_pred):
+    """
+    Calculates the Mean Absolute Error (MAE).
+
+    MAE = (1/n) * Σ|y_true - y_pred|
+
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth (correct) target values.
+    y_pred : array-like
+        Estimated target values.
+
+    Returns
+    -------
+    float
+        The MAE score.
+    """
+    return np.mean(np.abs(y_true - y_pred))
+
+def mean_squared_error(y_true, y_pred):
+    """
+    Calculates the Mean Squared Error (MSE).
+
+    MSE = (1/n) * Σ(y_true - y_pred)^2
+
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth (correct) target values.
+    y_pred : array-like
+        Estimated target values.
+
+    Returns
+    -------
+    float
+        The MSE score.
+    """
+    return np.mean((y_true - y_pred) ** 2)
+
+def r2_score(y_true, y_pred):
+    """
+    Calculates the R-squared (coefficient of determination) regression score.
+
+    R^2 = 1 - (Σ(y_true - y_pred)^2) / (Σ(y_true - y_mean)^2)
+
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth (correct) target values.
+    y_pred : array-like
+        Estimated target values.
+
+    Returns
+    -------
+    float
+        The R^2 score.
+    """
+    ss_res = np.sum((y_true - y_pred) ** 2)
+    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+    return 1 - (ss_res / ss_tot)
+

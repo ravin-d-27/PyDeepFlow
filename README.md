@@ -102,10 +102,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pydeepflow.model import Multi_Layer_ANN
+from pydeeepflow.datasets import load_iris
 
 # Load Iris dataset
-url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
-df = pd.read_csv(url, header=None, names=["sepal_length", "sepal_width", "petal_length", "petal_width", "species"])
+df = load_iris(as_frame=True)
 
 # Data preprocessing
 df['species'] = df['species'].astype('category').cat.codes
@@ -129,6 +129,35 @@ y_pred = ann.predict(X_test)
 accuracy = np.mean(np.argmax(y_pred, axis=1) == np.argmax(y_test, axis=1))
 print(f"Test Accuracy: {accuracy * 100:.2f}%")
 ```
+
+PyDeepFlow now also supports regression tasks. Here is how you can train a model and evaluate it with the new regression metrics:
+
+# Create a simple regression dataset
+X = np.linspace(-10, 10, 100).reshape(-1, 1)
+y = (0.5 * X**2 + 2 * X + 5 + np.random.randn(100, 1) * 5).reshape(-1, 1)
+
+# Split and scale data (similar to classification example)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler_x = StandardScaler().fit(X_train)
+X_train = scaler_x.transform(X_train)
+X_test = scaler_x.transform(X_test)
+scaler_y = StandardScaler().fit(y_train)
+y_train = scaler_y.transform(y_train)
+y_test = scaler_y.transform(y_test)
+
+# Train ANN for regression
+ann_regression = Multi_Layer_ANN(X_train, y_train, hidden_layers=[10, 10], activations=['relu', 'relu'], loss='mean_squared_error')
+ann_regression.fit(epochs=500, learning_rate=0.01)
+
+# Evaluate the model using new regression metrics
+print("Regression Model Evaluation:")
+regression_results = ann_regression.evaluate(
+    X_test,
+    y_test,
+    metrics=['mean_absolute_error', 'mean_squared_error', 'r2_score']
+)
+print(regression_results)
+
 
 ## **Contributing to Pydeepflow on GitHub**
 

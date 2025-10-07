@@ -27,10 +27,10 @@ class TestActivations(unittest.TestCase):
         np.testing.assert_array_equal(result, expected)
 
     def test_gelu(self):
-        x = np.array([0])
+        x = np.array([-2, -1, 0, 1, 2])
         result = activation(x, 'gelu', self.device_cpu)
-        expected = np.array([0])
-        np.testing.assert_array_almost_equal(result, expected)
+        expected = np.array([-0.045402, -0.158808, 0. , 0.841192, 1.954598])
+        np.testing.assert_allclose(result, expected, rtol=1e-5)
 
     def test_elu(self):
         x = np.array([-1, 0, 1])
@@ -51,10 +51,10 @@ class TestActivations(unittest.TestCase):
         np.testing.assert_array_almost_equal(result, expected)
 
     def test_swish(self):
-        x = np.array([0])
+        x = np.array([-2, -1, 0, 1, 2])
         result = activation(x, 'swish', self.device_cpu)
-        expected = np.array([0])
-        np.testing.assert_array_almost_equal(result, expected)
+        expected = x * (1 / (1 + np.exp(-x))) # Consistent calculation
+        np.testing.assert_allclose(result, expected, rtol=1e-5)
 
     def test_sigmoid(self):
         x = np.array([0])
@@ -174,6 +174,26 @@ class TestActivations(unittest.TestCase):
         result = activation_derivative(x, 'tanhshrink', self.device_cpu)
         expected = np.array([0.419974])
         np.testing.assert_array_almost_equal(result, expected, decimal=5)
+
+    def test_leaky_relu_derivative(self): 
+        x = np.array([-1, 0, 1])
+        result = activation_derivative(x, 'leaky_relu', self.device_cpu, alpha=0.01)
+        expected = np.array([0.01, 0.01, 1])
+        np.testing.assert_allclose(result, expected, rtol=1e-5)
+
+    def test_gelu_derivative(self):
+        x = np.array([-2, -1, 0, 1, 2])
+        result = activation_derivative(x, 'gelu', self.device_cpu)
+        expected = np.array([-0.086099, -0.082964,  0.5,  1.082964,  1.086099])
+        np.testing.assert_allclose(result, expected, rtol=1e-5)
+
+    def test_swish_derivative(self): 
+        x = np.array([-2, -1, 0, 1, 2])
+        sigmoid_x = 1 / (1 + np.exp(-x))
+        expected = sigmoid_x + x * sigmoid_x * (1 - sigmoid_x)
+        result = activation_derivative(x, 'swish', self.device_cpu)
+        np.testing.assert_allclose(result, expected, rtol=1e-5)
+
 
     def test_softshrink_derivative(self):
         x = np.array([-1.5, -0.5, 0.5, 1.5])

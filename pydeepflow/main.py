@@ -75,9 +75,19 @@ if __name__ == "__main__":
     # Initialize the ANN with use_gpu option
     ann = Multi_Layer_ANN(X, y_one_hot, hidden_layers, activations, loss='categorical_crossentropy', use_gpu=use_gpu)
 
-    # Initialize CrossValidator and perform K-Fold Cross Validation
-    cross_validator = CrossValidator(k=n_splits, metrics=["accuracy"])
-    results = cross_validator.evaluate(ann, X, y_one_hot, epochs=1000, learning_rate=0.01, verbose=True)
+    # Initialize CrossValidator
+    cross_validator = CrossValidator(n_splits=n_splits)
+
+    # Perform K-Fold Cross Validation and pass metrics to the evaluate method.
+    results = cross_validator.evaluate(
+        ann,
+        X,
+        y_one_hot,
+        epochs=1000,
+        learning_rate=0.01,
+        metrics=["accuracy"],  # Metrics argument moved here
+        verbose=True
+    )
 
     # Print cross-validation results
     print("Cross-Validation Results:", results)
