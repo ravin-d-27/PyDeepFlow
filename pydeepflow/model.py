@@ -13,6 +13,8 @@ from pydeepflow.batch_normalization import BatchNormalization
 from pydeepflow.weight_initialization import get_weight_initializer
 from tqdm import tqdm
 from pydeepflow.optimizers import Adam, RMSprop
+from pydeepflow.validation import ModelValidator
+import numpy as np
 from pydeepflow.introspection import create_introspector, ModelSummaryFormatter
 
 # ====================================================================
@@ -273,6 +275,22 @@ class Multi_Layer_ANN:
         Raises:
             ValueError: If the number of activation functions does not match the number of hidden layers.
         """
+        # Validate inputs before proceeding with initialization
+        validator = ModelValidator(device=None)  # Device not needed for validation
+        validator.validate_training_data(X_train, "X_train", max_dimensions=2)
+        validator.validate_training_data(Y_train, "Y_train", max_dimensions=2)
+        validator.validate_data_compatibility(X_train, Y_train)
+        validator.validate_hidden_layers(hidden_layers)
+        validator.validate_activations(activations, hidden_layers)
+        validator.validate_loss_function(loss)
+        validator.validate_regularization_params(l2_lambda, dropout_rate)
+        validator.validate_optimizer(optimizer)
+        validator.validate_initial_weights(initial_weights)
+        
+        # Validate and adjust batch_size
+        self.batch_size = validator.validate_training_hyperparameters(
+            learning_rate, epochs, batch_size, X_train
+        )
         # Validate inputs using the ModelValidator utility
         from pydeepflow.validation import ModelValidator
         validator = ModelValidator()
@@ -1087,6 +1105,17 @@ class Multi_Layer_CNN:
     def __init__(self, layers_list, X_train, Y_train, loss='categorical_crossentropy',
                  use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd'):
         
+        # Validate inputs before proceeding with initialization
+        validator = ModelValidator(device=None)  # Device not needed for validation
+        validator.validate_training_data(X_train, "X_train", max_dimensions=4)  # CNN supports up to 4D
+        validator.validate_training_data(Y_train, "Y_train", max_dimensions=2)  # Labels are typically 1D or 2D
+        validator.validate_data_compatibility(X_train, Y_train)
+        validator.validate_cnn_layers(layers_list)
+        validator.validate_cnn_input_data(X_train, layers_list)
+        validator.validate_loss_function(loss)
+        validator.validate_regularization_params(l2_lambda, dropout_rate)
+        validator.validate_optimizer(optimizer)
+        
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
         
@@ -1311,6 +1340,12 @@ class Multi_Layer_CNN:
     # --- Methods copied from Multi_Layer_ANN and adapted for CNN structure ---
     
     def fit(self, epochs, learning_rate=0.01, lr_scheduler=None, early_stop=None, X_val=None, y_val=None, checkpoint=None, verbose=False, clipping_threshold=None):
+        # Validate training hyperparameters
+        validator = ModelValidator(device=None)
+        batch_size = validator.validate_training_hyperparameters(
+            learning_rate, epochs, 32, self.X_train  # Default batch_size=32 for CNN
+        )
+        
         if early_stop:
             assert X_val is not None and y_val is not None, "Validation set required for early stopping"
 
