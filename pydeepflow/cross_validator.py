@@ -39,9 +39,28 @@ class CrossValidator:
         Returns:
             dict: A dictionary containing the requested metrics.
         """
+
+        tp = np.sum((y_true == 1) & (y_pred == 1))
+        fp = np.sum((y_true == 0) & (y_pred == 1))
+        fn = np.sum((y_true == 1) & (y_pred == 0))
+
+        epslion = 1e-12 
+
+        precision = tp / (tp + fp + epslion) 
+        recall = tp / (tp + fn + epslion) 
+        
         results = {}
         for metric in metrics:
             if metric == "accuracy":
                 results['accuracy'] = np.mean(y_true == y_pred)
+
+            elif metric == "precision":
+                results['precision'] = precision
+                
+            elif metric == "recall":
+                results['recall'] = recall
+
+            elif metric == "f1": 
+                results['f1'] = 2 * (precision * recall) / (precision + recall) 
             
         return results
