@@ -307,17 +307,7 @@ class Multi_Layer_ANN:
         self.batch_size = validator.validate_training_hyperparameters(
             learning_rate, epochs, batch_size, X_train
         )
-        # Validate inputs using the ModelValidator utility
-        from pydeepflow.validation import ModelValidator
-        validator = ModelValidator()
-        
-        # Validate training data
-        validator.validate_training_data(X_train, "X_train")
-        validator.validate_training_data(Y_train, "Y_train")
-        validator.validate_data_compatibility(X_train, Y_train)
-        
-        # Validate architecture
-        validator.validate_hidden_layers(hidden_layers)
+    # (Redundant ModelValidator import and validation removed)
         validator.validate_activations(activations, hidden_layers)
         validator.validate_loss_function(loss)
         
@@ -1123,7 +1113,10 @@ class Multi_Layer_CNN:
         
         # Validate inputs before proceeding with initialization
         validator = ModelValidator(device=None)  # Device not needed for validation
-        validator.validate_training_data(X_train, "X_train", max_dimensions=4)  # CNN supports up to 4D
+        # --- CNN-specific validation: enforce 4D input for images ---
+        validator.validate_training_data(X_train, "X_train", max_dimensions=4)
+        if np.asarray(X_train).ndim != 4:
+            raise ValueError("X_train must be a 4D array (N, H, W, C) for CNN models.")
         validator.validate_training_data(Y_train, "Y_train", max_dimensions=2)  # Labels are typically 1D or 2D
         validator.validate_data_compatibility(X_train, Y_train)
         validator.validate_cnn_layers(layers_list)
@@ -1159,22 +1152,24 @@ class Multi_Layer_CNN:
             if layer_type == 'conv':
                 if len(current_input_shape) != 3:
                     raise ValueError("ConvLayer requires 4D input (N, H, W, C). Check previous layer configuration.")
-                    
+
                 in_c = current_input_shape[-1]
                 out_c = layer_config['out_channels']
                 k_size = layer_config['kernel_size']
                 stride = layer_config.get('stride', 1)
                 padding = layer_config.get('padding', 0)
-                
+
+                # --- CNN-specific weight initialization: He/Kaiming for Conv ---
+                # (Already used in ConvLayer by default, but can be extended here)
                 conv_layer = ConvLayer(in_c, out_c, k_size, stride, padding, device=self.device)
                 self.layers_list.append(conv_layer)
-                
+
                 # Update current shape for the next layer
                 H, W = current_input_shape[0], current_input_shape[1]
                 H_out = (H + 2 * padding - k_size) // stride + 1
                 W_out = (W + 2 * padding - k_size) // stride + 1
-                current_input_shape = (H_out, W_out, out_c) 
-                
+                current_input_shape = (H_out, W_out, out_c)
+
                 # Add ConvLayer parameters to the trainable list
                 self.trainable_params.extend([conv_layer.params['W'], conv_layer.params['b']])
 
@@ -1196,16 +1191,20 @@ class Multi_Layer_CNN:
                 output_dim = layer_config['neurons']
                 activation_name = layer_config['activation']
 
-                # Initialize Dense weights (W) and biases (b)
-                scale = np.sqrt(2 / max(1, input_dim))
+                # --- CNN-specific weight initialization for Dense layers ---
+                # Use Xavier/Glorot for tanh/softmax, He for relu/variants
+                if activation_name in ['relu', 'leaky_relu', 'prelu', 'elu', 'gelu', 'selu', 'mish', 'rrelu', 'hardswish']:
+                    scale = np.sqrt(2 / max(1, input_dim))  # He initialization
+                else:
+                    scale = np.sqrt(1 / max(1, input_dim))  # Xavier/Glorot for others
                 w = self.device.random().randn(input_dim, output_dim) * scale
                 b = self.device.zeros((1, output_dim))
-                
+
                 dense_layer = {'W': w, 'b': b, 'activation': activation_name}
                 self.layers_list.append(dense_layer)
-                
+
                 current_input_shape = (output_dim,)
-                
+
                 # Add Dense layer parameters to the trainable list
                 self.trainable_params.extend([dense_layer['W'], dense_layer['b']])
 
@@ -1227,105 +1226,103 @@ class Multi_Layer_CNN:
         """
         Performs forward propagation by chaining through all layers (Conv -> Flatten -> Dense).
         Caches inputs and Z-values for backpropagation.
+        Handles ConvLayer, Flatten, and Dense layers in correct order.
         """
         current_activation = X
         Z_values = []
-        A_values = [X] # Stores all activation outputs (A0 = Input, A1, A2...)
-        
+        A_values = [X]  # Stores all activation outputs (A0 = Input, A1, A2...)
+
         for layer_idx, layer in enumerate(self.layers_list):
-            
-            if isinstance(layer, ConvLayer) or isinstance(layer, Flatten):
+            if isinstance(layer, ConvLayer):
+                # --- ConvLayer forward ---
                 current_activation = layer.forward(current_activation)
                 A_values.append(current_activation)
-
-            elif isinstance(layer, dict) and 'W' in layer: # Dense layer
+            elif isinstance(layer, Flatten):
+                # --- Flatten forward ---
+                current_activation = layer.forward(current_activation)
+                A_values.append(current_activation)
+            elif isinstance(layer, dict) and 'W' in layer:
+                # --- Dense forward ---
                 W, b = layer['W'], layer['b']
-                
                 # Linear Transformation
                 Z = self.device.dot(current_activation, W) + b
                 Z_values.append(Z)
-
                 # Activation
-                if layer_idx == len(self.layers_list) - 1: # Final output layer
+                if layer_idx == len(self.layers_list) - 1:
+                    # Final output layer: use output_activation
                     A = activation(Z, self.output_activation, self.device)
                 else:
                     A = activation(Z, layer['activation'], self.device)
                     A = self.regularization.apply_dropout(A, training=self.training)
-                
                 current_activation = A
                 A_values.append(A)
-        
         return A_values, Z_values
 
     def backpropagation(self, X, y, A_values, Z_values, learning_rate, clip_value=None):
         """
         Propagates gradients backward through Dense, Flatten, and Conv layers, updating all parameters.
+        Handles ConvLayer and Flatten integration for CNNs.
         """
         N = X.shape[0]
-        
+
         # 1. Output Layer Error (dOut = dLoss/dA * dA/dZ)
         output_error = A_values[-1] - y
         dOut = output_error * activation_derivative(A_values[-1], self.output_activation, self.device)
-        
+
         # Gradients are accumulated in this list (must match self.trainable_params order)
         grads_to_update = []
-        
+
         # Pointers for traversing Dense layers backwards
         Z_index = len(Z_values) - 1
         A_index = len(A_values) - 2  # Previous activation (current is A_values[-1])
-        
-        # Accumulate gradients starting from the end of the layer list
+
+        # --- Backward pass through all layers (Dense, Flatten, Conv) ---
         for i in reversed(range(len(self.layers_list))):
             layer = self.layers_list[i]
 
             if isinstance(layer, ConvLayer):
-                # --- A. Conv Backward Pass ---
-                
-                dIn = layer.backward(dOut) # Populates layer.grads
-                
+                # --- ConvLayer backward: computes dW, db, and dIn for previous layer ---
+                dIn = layer.backward(dOut)  # Populates layer.grads
                 # Store Conv gradients (W then b) - insert at beginning to maintain order
-                grads_to_update.insert(0, layer.grads['db']) # Insert bias first
-                grads_to_update.insert(0, layer.grads['dW']) # Insert weights second
-                    
-                dOut = dIn # Gradient for the previous layer (Flatten or another Conv)
+                grads_to_update.insert(0, layer.grads['db'])  # Insert bias first
+                grads_to_update.insert(0, layer.grads['dW'])  # Insert weights second
+                dOut = dIn  # Gradient for the previous layer (Flatten or another Conv)
 
             elif isinstance(layer, Flatten):
-                # --- B. Flatten Backward Pass ---
+                # --- Flatten backward: reshapes gradient for previous Conv layer ---
                 dIn = layer.backward(dOut)
-                dOut = dIn # Gradient for the previous layer (Conv)
+                dOut = dIn
 
-            elif isinstance(layer, dict) and 'W' in layer: # Dense layer
-                # --- C. Dense Backward Pass ---
+            elif isinstance(layer, dict) and 'W' in layer:
+                # --- Dense backward: computes dW, db, and dIn for previous layer ---
                 W_param = layer['W']
-                A_prev = A_values[A_index] # Activation output of previous layer
-                
+                A_prev = A_values[A_index]
+
                 # 1. Calculate delta (dZ)
-                if i == len(self.layers_list) - 1: # Output layer
-                    delta = dOut 
+                if i == len(self.layers_list) - 1:  # Output layer
+                    delta = dOut
                 else:
                     # Hidden Dense layer: Error from next layer already passed in dOut
                     Z_curr = Z_values[Z_index]
                     delta = dOut * activation_derivative(Z_curr, layer['activation'], self.device)
-                    
+
                 # 2. Compute gradients dW and db
                 dW = self.device.dot(A_prev.T, delta)
                 db = self.device.sum(delta, axis=0, keepdims=True)
-                
+
                 # Store Dense gradients (W then b) - insert at beginning to maintain order
-                grads_to_update.insert(0, db) # Insert bias first
-                grads_to_update.insert(0, dW) # Insert weights second
+                grads_to_update.insert(0, db)
+                grads_to_update.insert(0, dW)
 
                 # 3. Calculate dOut for the previous layer (dIn)
                 dOut = self.device.dot(delta, W_param.T)
-                
+
                 Z_index -= 1
                 A_index -= 1
-        
+
         # 4. Parameter Update (Optimization)
-        
         # Apply L2 regularization to weights (W) only
         final_grads = []
-        
         for i in range(0, len(self.trainable_params), 2):
             W_param = self.trainable_params[i]
             b_param = self.trainable_params[i + 1]
@@ -1334,15 +1331,15 @@ class Multi_Layer_CNN:
 
             # L2 for W
             l2_grad_W = (self.regularization.l2_lambda * W_param) / N
-            
+
             # Combine gradients
             final_grads.append(grad_W + l2_grad_W)
-            final_grads.append(grad_b) # Bias has no L2
+            final_grads.append(grad_b)  # Bias has no L2
 
             # Apply gradient clipping
             if clip_value is not None:
                 final_grads[i] = self.regularization.clip_gradient(final_grads[i], clip_value)
-                final_grads[i+1] = self.regularization.clip_gradient(final_grads[i+1], clip_value)
+                final_grads[i + 1] = self.regularization.clip_gradient(final_grads[i + 1], clip_value)
 
         if self.optimizer:
             # Optimizer updates ALL parameters in self.trainable_params list in place
