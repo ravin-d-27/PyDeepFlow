@@ -1,4 +1,4 @@
-gitname: run tests
+name: run tests
 
 on:
   push:
