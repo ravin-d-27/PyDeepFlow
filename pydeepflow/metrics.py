@@ -1,5 +1,24 @@
 import numpy as np
 
+def accuracy(y_true, y_pred, total_samples):
+    """
+    Calculates the accuracy for binary classsification.
+    
+    Accuracy is the ratio of correct predictions to the total predictions or observations.
+    
+    Args:
+        y_true (np.ndarray): Ground truth (correct) labels.
+        y_pred (np.ndarray): Predicted labels, as returned by a classifier.\
+        total_samples (int): Total samples or length of the dataset used.
+
+    Returns:
+        float: The accuracy score.
+    """
+    true_positives = np.sum(np.logical_and(y_pred == 1, y_true == 1))
+    true_negatives = np.sum(np.logical_and(y_pred == 0, y_true == 0))
+    accuracy = (true_positives + true_negatives) / total_samples
+    return accuracy
+
 def precision_score(y_true, y_pred):
     """
     Calculates the precision for binary classification.
