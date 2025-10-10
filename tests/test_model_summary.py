@@ -11,6 +11,45 @@ from pydeepflow.model import Multi_Layer_ANN, Multi_Layer_CNN
 
 
 class TestModelSummary(unittest.TestCase):
+    def test_cnn_raises_on_non4d_input(self):
+        """Test that Multi_Layer_CNN raises ValueError if input is not 4D."""
+        X_bad = np.random.randn(100, 28, 28)  # 3D, should fail
+        y = np.eye(10)[np.random.randint(0, 10, 100)]
+        layers = [
+            {'type': 'conv', 'out_channels': 8, 'kernel_size': 3},
+            {'type': 'flatten'},
+            {'type': 'dense', 'neurons': 10, 'activation': 'softmax'}
+        ]
+        with self.assertRaises(ValueError):
+            Multi_Layer_CNN(layers, X_bad, y)
+
+    def test_cnn_weight_initialization(self):
+        """Test that ConvLayer and Dense layers use correct initializers in Multi_Layer_CNN."""
+        # Use a simple CNN config
+        X = np.random.randn(10, 8, 8, 3)
+        y = np.eye(5)[np.random.randint(0, 5, 10)]
+        layers = [
+            {'type': 'conv', 'out_channels': 4, 'kernel_size': 3},
+            {'type': 'flatten'},
+            {'type': 'dense', 'neurons': 6, 'activation': 'relu'},
+            {'type': 'dense', 'neurons': 5, 'activation': 'softmax'}
+        ]
+        model = Multi_Layer_CNN(layers, X, y)
+        # Check ConvLayer weight shape and std (He)
+        conv = model.layers_list[0]
+        W = conv.params['W']
+        fan_in = 3 * 3 * 3
+        he_std = np.sqrt(2.0 / fan_in)
+        self.assertAlmostEqual(W.std(), he_std, delta=he_std*0.5)
+        # Check Dense layer weight std (He for relu, Xavier for softmax)
+        dense1 = model.layers_list[2]
+        dense2 = model.layers_list[3]
+        W1 = dense1['W']
+        W2 = dense2['W']
+        he_dense_std = np.sqrt(2.0 / W1.shape[0])
+        xavier_dense_std = np.sqrt(1.0 / W2.shape[0])
+        self.assertAlmostEqual(W1.std(), he_dense_std, delta=he_dense_std*0.5)
+        self.assertAlmostEqual(W2.std(), xavier_dense_std, delta=xavier_dense_std*0.5)
     """Test model.summary() method and get_model_info() functionality."""
     
     def setUp(self):

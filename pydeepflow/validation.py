@@ -399,13 +399,17 @@ class ModelValidator:
         # Check if first layer is convolutional
         first_layer = layers_config[0] if layers_config else None
         if first_layer and first_layer.get('type', '').lower() == 'conv':
+            # --- Enforce 4D input for CNNs ---
             if X_array.ndim != 4:
                 raise ValueError(f"CNN models with convolutional layers require 4D input data (N, H, W, C), "
-                               f"got {X_array.ndim}D array with shape {X_array.shape}")
-            
+                                 f"got {X_array.ndim}D array with shape {X_array.shape}")
             if X_array.shape[1] <= 0 or X_array.shape[2] <= 0 or X_array.shape[3] <= 0:
                 raise ValueError(f"Invalid input dimensions for CNN: {X_array.shape}. "
-                               f"Height, width, and channels must be positive")
+                                 f"Height, width, and channels must be positive")
+            # Additional check: warn if shape is not typical image shape
+            if X_array.shape[1] < 3 or X_array.shape[2] < 3:
+                raise ValueError(f"Input images too small for CNN: {X_array.shape[1]}x{X_array.shape[2]}. "
+                                 f"Minimum recommended size is 3x3")
         
         # Additional validation for minimum image size
         if X_array.ndim == 4:

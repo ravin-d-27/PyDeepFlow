@@ -73,24 +73,27 @@ if __name__ == "__main__":
         optimizer='adam'
     )
 
-    # Train the network end-to-end
-    print("\nStarting integrated training for 50 epochs...")
-    model.fit(
-        epochs=50,
-        learning_rate=0.01,
-        verbose=True,
-        X_val=X_val,
-        y_val=y_val
-    )
-
-    # Final test set prediction (The model handles the Conv/Flatten/Dense chain internally)
-    y_pred = model.predict(X_test)
-    y_pred_classes = np.argmax(y_pred, axis=1)
-    y_true_classes = np.argmax(y_test, axis=1)
-    test_accuracy = accuracy_score(y_true_classes, y_pred_classes) * 100
-
-    print(f"\n✅ Final Test Accuracy: {test_accuracy:.2f}%")
-
-    # Optional: plot training history
-    plot_util = Plotting_Utils()
-    plot_util.plot_training_history(model.history, metrics=('loss', 'accuracy'), figure='training_history.png')
+    try:
+        # Train the network end-to-end
+        print("\nStarting integrated training for 50 epochs...")
+        model.fit(
+            epochs=50,
+            learning_rate=0.01,
+            verbose=True,
+            X_val=X_val,
+            y_val=y_val
+        )
+        # Print model summary after training
+        print("\nModel Summary:")
+        model.summary()
+        # Final test set prediction (The model handles the Conv/Flatten/Dense chain internally)
+        y_pred = model.predict(X_test)
+        y_pred_classes = np.argmax(y_pred, axis=1)
+        y_true_classes = np.argmax(y_test, axis=1)
+        test_accuracy = accuracy_score(y_true_classes, y_pred_classes) * 100
+        print(f"\n705 Final Test Accuracy: {test_accuracy:.2f}%")
+        # Optional: plot training history
+        plot_util = Plotting_Utils()
+        plot_util.plot_training_history(model.history, metrics=('loss', 'accuracy'), figure='training_history.png')
+    except ValueError as e:
+        print(f"[ERROR] {e}")

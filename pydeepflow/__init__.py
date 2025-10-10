@@ -51,5 +51,5 @@ __all__ = [
 if _has_weight_init:
     __all__.append("get_weight_initializer")
 
-if _has_cnn:,
+if _has_cnn:
     __all__.extend(["ConvLayer", "Flatten", "Multi_Layer_CNN"])
