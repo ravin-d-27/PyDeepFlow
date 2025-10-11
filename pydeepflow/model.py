@@ -21,7 +21,6 @@ from pydeepflow.weight_initialization import (
 from pydeepflow.optimizers import Adam, RMSprop
 from tqdm import tqdm
 from pydeepflow.validation import ModelValidator
-import numpy as np
 from pydeepflow.introspection import create_introspector, ModelSummaryFormatter
 
 # ====================================================================
