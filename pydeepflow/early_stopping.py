@@ -49,5 +49,5 @@ class EarlyStopping:
             self.counter = 0
         else:
             self.counter += 1
-            if self.counter > self.patience:
+            if self.counter >= self.patience:
                 self.early_stop = True
