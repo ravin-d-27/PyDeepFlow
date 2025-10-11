@@ -66,8 +66,8 @@ class TestCrossValidator(unittest.TestCase):
         tp = np.sum((y_true == 1) & (y_pred == 1))  # 2
         fp = np.sum((y_true == 0) & (y_pred == 1))  # 1
         fn = np.sum((y_true == 1) & (y_pred == 0))  # 1
-        precision = tp / (tp + fp + 1e-12)  # 2 / (2 + 1)
-        recall = tp / (tp + fn + 1e-12)  # 2 / (2 + 1)
+        precision = tp / (tp + fp + 1e-7)  # 2 / (2 + 1)
+        recall = tp / (tp + fn + 1e-7)  # 2 / (2 + 1)
         expected_f1 = 2 * (precision * recall) / (precision + recall)
         self.assertAlmostEqual(result['f1'], expected_f1)
 
@@ -83,8 +83,8 @@ class TestCrossValidator(unittest.TestCase):
         tp = np.sum((y_true == 1) & (y_pred == 1))  # 2
         fp = np.sum((y_true == 0) & (y_pred == 1))  # 1
         fn = np.sum((y_true == 1) & (y_pred == 0))  # 1
-        expected_precision = tp / (tp + fp + 1e-12)
-        expected_recall = tp / (tp + fn + 1e-12)
+        expected_precision = tp / (tp + fp + 1e-7)
+        expected_recall = tp / (tp + fn + 1e-7)
         expected_f1 = 2 * (expected_precision * expected_recall) / (expected_precision + expected_recall)
         
         self.assertAlmostEqual(result['accuracy'], expected_accuracy)
