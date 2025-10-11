@@ -33,7 +33,7 @@ def example_auto_initialization():
         Y_train=Y_train,
         hidden_layers=[256, 128, 64],
         activations=['relu', 'relu', 'tanh'],  # Mixed activations
-        initial_weights='auto',  # Automatic selection
+        weight_init='auto',  # Automatic selection
         bias_init='auto',  # Activation-aware bias initialization
         loss='categorical_crossentropy',
         use_gpu=False
@@ -46,7 +46,9 @@ def example_auto_initialization():
     print("- Output (Softmax): Xavier Normal initialization")
     
     # Print detailed initialization info
-    model.print_initialization_info()
+    print("Initialization metadata:")
+    for i, meta in enumerate(model.init_metadata):
+        print(f"  {meta}")
     
     return model
 
@@ -73,14 +75,16 @@ def example_manual_uniform():
         Y_train=Y_train,
         hidden_layers=[256, 128],
         activations=['sigmoid', 'sigmoid'],
-        initial_weights='xavier_uniform',  # Manual method
+        weight_init='xavier_uniform',  # Manual method
         bias_init='zeros',  # All zeros for biases
         loss='categorical_crossentropy',
         use_gpu=False
     )
     
     print("\nAll layers use Xavier Uniform initialization")
-    model.print_initialization_info()
+    print("Initialization metadata:")
+    for i, meta in enumerate(model.init_metadata):
+        print(f"  {meta}")
     
     return model
 
@@ -108,7 +112,7 @@ def example_layer_specific():
         Y_train=Y_train,
         hidden_layers=[256, 128, 64],
         activations=['relu', 'elu', 'tanh'],
-        initial_weights=['he_normal', 'he_uniform', 'xavier_normal'],  # Layer-specific
+        weight_init=['he_normal', 'he_uniform', 'xavier_normal', 'xavier_uniform'],  # Layer-specific (including output layer)
         bias_init='auto',
         loss='categorical_crossentropy',
         use_gpu=False
@@ -118,8 +122,11 @@ def example_layer_specific():
     print("- Layer 1: He Normal")
     print("- Layer 2: He Uniform")
     print("- Layer 3: Xavier Normal")
+    print("- Output Layer: Xavier Uniform")
     
-    model.print_initialization_info()
+    print("Initialization metadata:")
+    for i, meta in enumerate(model.init_metadata):
+        print(f"  {meta}")
     
     return model
 
@@ -130,41 +137,47 @@ def example_layer_specific():
 
 def example_cnn_auto():
     """
-    Demonstrates automatic weight initialization for CNN models.
+    Demonstrates automatic weight initialization for CNN models using ConvLayer.
     """
     print("\n" + "="*80)
-    print("Example 4: CNN with Automatic Initialization")
+    print("Example 4: CNN ConvLayer with Automatic Initialization")
     print("="*80)
     
-    np.random.seed(42)
-    # MNIST-like input: 100 samples, 28x28 grayscale images
-    X_train = np.random.randn(100, 28, 28, 1)
-    Y_train = np.eye(10)[np.random.randint(0, 10, 100)]
+    from pydeepflow.model import ConvLayer
+    from pydeepflow.device import Device
     
-    # Define CNN architecture
-    layers_config = [
-        {'type': 'conv', 'out_channels': 32, 'kernel_size': 3, 'activation': 'relu'},
-        {'type': 'conv', 'out_channels': 64, 'kernel_size': 3, 'activation': 'relu'},
-        {'type': 'flatten'},
-        {'type': 'dense', 'neurons': 128, 'activation': 'relu'},
-        {'type': 'dense', 'neurons': 10, 'activation': 'softmax'}
-    ]
+    # Create individual ConvLayer instances to demonstrate initialization
+    device = Device(use_gpu=False)
     
-    model = Multi_Layer_CNN(
-        layers_list=layers_config,
-        X_train=X_train,
-        Y_train=Y_train,
-        activations=['relu', 'relu', 'relu', 'softmax'],
-        initial_weights='auto',  # Automatic initialization
-        bias_init='auto',
-        loss='categorical_crossentropy',
-        use_gpu=False
+    print("Creating ConvLayer instances with automatic initialization:")
+    
+    # Conv layer 1: ReLU activation
+    conv1 = ConvLayer(
+        in_channels=3, out_channels=32, kernel_size=3,
+        device=device, activation='relu', weight_init='auto'
     )
+    print(f"Conv1 (ReLU): {conv1.init_metadata}")
     
-    print("\nCNN layers automatically initialized based on activations")
-    model.print_initialization_info()
+    # Conv layer 2: Sigmoid activation  
+    conv2 = ConvLayer(
+        in_channels=32, out_channels=64, kernel_size=3,
+        device=device, activation='sigmoid', weight_init='auto'
+    )
+    print(f"Conv2 (Sigmoid): {conv2.init_metadata}")
     
-    return model
+    # Conv layer 3: SELU activation
+    conv3 = ConvLayer(
+        in_channels=64, out_channels=128, kernel_size=3,
+        device=device, activation='selu', weight_init='auto'
+    )
+    print(f"Conv3 (SELU): {conv3.init_metadata}")
+    
+    print("\nConvLayer initialization working correctly!")
+    print("- ReLU → He initialization")
+    print("- Sigmoid → Xavier initialization") 
+    print("- SELU → LeCun initialization")
+    
+    return [conv1, conv2, conv3]
 
 
 # ============================================================================
@@ -189,14 +202,16 @@ def example_custom_bias():
         Y_train=Y_train,
         hidden_layers=[256, 128],
         activations=['relu', 'relu'],
-        initial_weights='he_normal',
+        weight_init='he_normal',
         bias_init=0.1,  # Custom constant value for all biases
         loss='categorical_crossentropy',
         use_gpu=False
     )
     
     print("\nAll biases initialized to 0.1")
-    model.print_initialization_info()
+    print("Initialization metadata:")
+    for i, meta in enumerate(model.init_metadata):
+        print(f"  {meta}")
     
     return model
 

@@ -521,27 +521,27 @@ class TestInputValidation(unittest.TestCase):
 
     # Initial weights validation tests
     def test_initial_weights_valid(self):
-        """Test valid initial_weights values work."""
-        valid_weights = ['auto', 'he', 'xavier', 'glorot', 'lecun', 'random']
+        """Test valid weight_init values work."""
+        valid_weights = ['auto', 'he_normal', 'xavier_normal', 'glorot_normal', 'lecun_normal', 'random_normal']
         
         for weight_init in valid_weights:
             model = Multi_Layer_ANN(self.X_train_valid, self.y_train_multiclass,
-                                   [10], ['relu'], initial_weights=weight_init)
+                                   [10], ['relu'], weight_init=weight_init)
             self.assertIsNotNone(model)
 
     def test_initial_weights_invalid(self):
-        """Test invalid initial_weights values are rejected."""
+        """Test invalid weight_init values are rejected."""
         with self.assertRaises(ValueError) as context:
             Multi_Layer_ANN(self.X_train_valid, self.y_train_multiclass,
-                           [10], ['relu'], initial_weights='invalid')
-        self.assertIn("Unsupported initial_weights", str(context.exception))
+                           [10], ['relu'], weight_init='invalid')
+        self.assertIn("Unsupported weight initialization", str(context.exception))
 
     def test_initial_weights_wrong_type(self):
-        """Test initial_weights must be string."""
+        """Test weight_init must be string or list."""
         with self.assertRaises(TypeError) as context:
             Multi_Layer_ANN(self.X_train_valid, self.y_train_multiclass,
-                           [10], ['relu'], initial_weights=123)
-        self.assertIn("must be a string", str(context.exception))
+                           [10], ['relu'], weight_init=123)
+        self.assertIn("must be a string or list", str(context.exception))
 
 
 

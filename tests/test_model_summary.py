@@ -21,7 +21,7 @@ class TestModelSummary(unittest.TestCase):
             {'type': 'dense', 'neurons': 10, 'activation': 'softmax'}
         ]
         with self.assertRaises(ValueError):
-            Multi_Layer_CNN(layers, X_bad, y)
+            Multi_Layer_CNN(layers, X_bad, y, activations=['relu', 'softmax'])
 
     def test_cnn_weight_initialization(self):
         """Test that ConvLayer and Dense layers use correct initializers in Multi_Layer_CNN."""
@@ -34,7 +34,7 @@ class TestModelSummary(unittest.TestCase):
             {'type': 'dense', 'neurons': 6, 'activation': 'relu'},
             {'type': 'dense', 'neurons': 5, 'activation': 'softmax'}
         ]
-        model = Multi_Layer_CNN(layers, X, y)
+        model = Multi_Layer_CNN(layers, X, y, activations=['relu', 'relu', 'softmax'])
         # Check ConvLayer weight shape and std (He)
         conv = model.layers_list[0]
         W = conv.params['W']
@@ -104,6 +104,7 @@ class TestModelSummary(unittest.TestCase):
         
         self.model_cnn = Multi_Layer_CNN(
             self.cnn_layers, self.X_image, self.y_image,
+            activations=['relu', 'relu', 'relu', 'softmax'],  # Added missing activations parameter
             loss='categorical_crossentropy',
             optimizer='adam'
         )
