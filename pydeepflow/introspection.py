@@ -91,6 +91,7 @@ class ANNIntrospector(BaseModelIntrospector):
                 - output_shape: Output tensor shape
                 - params: Number of parameters in the layer
                 - activation: Activation function name
+                - init_method: Weight initialization method (if available)
         """
         layer_info = []
         
@@ -101,12 +102,18 @@ class ANNIntrospector(BaseModelIntrospector):
             'input_shape': (None, self.model.layers[0]),
             'output_shape': (None, self.model.layers[0]),
             'params': 0,
-            'activation': None
+            'activation': None,
+            'init_method': None
         })
         
         # Hidden layers
         for i in range(len(self.model.layers) - 2):
             layer_params = (self.model.layers[i] + 1) * self.model.layers[i+1]
+            
+            # Get initialization method from metadata if available
+            init_method = None
+            if hasattr(self.model, 'init_metadata') and i < len(self.model.init_metadata):
+                init_method = self.model.init_metadata[i].method
             
             layer_info.append({
                 'name': f'Dense_{i+1}',
@@ -114,18 +121,27 @@ class ANNIntrospector(BaseModelIntrospector):
                 'input_shape': (None, self.model.layers[i]),
                 'output_shape': (None, self.model.layers[i+1]),
                 'params': layer_params,
-                'activation': self.model.activations[i]
+                'activation': self.model.activations[i],
+                'init_method': init_method
             })
         
         # Output layer
         output_params = (self.model.layers[-2] + 1) * self.model.layers[-1]
+        output_layer_idx = len(self.model.layers) - 2
+        
+        # Get initialization method for output layer
+        init_method = None
+        if hasattr(self.model, 'init_metadata') and output_layer_idx < len(self.model.init_metadata):
+            init_method = self.model.init_metadata[output_layer_idx].method
+        
         layer_info.append({
             'name': f'Dense_{len(self.model.layers)-1}',
             'type': 'Dense (Output)',
             'input_shape': (None, self.model.layers[-2]),
             'output_shape': (None, self.model.layers[-1]),
             'params': output_params,
-            'activation': self.model.output_activation
+            'activation': self.model.output_activation,
+            'init_method': init_method
         })
         
         return layer_info
@@ -197,6 +213,7 @@ class ANNIntrospector(BaseModelIntrospector):
                 - optimizer: Optimizer name
                 - device: Device type (CPU/GPU)
                 - batch_size: Batch size (if available)
+                - initialization_metadata: List of initialization metadata (if available)
         """
         # Determine optimizer name
         optimizer_name = "SGD"  # Default
@@ -219,6 +236,23 @@ class ANNIntrospector(BaseModelIntrospector):
             config['batch_size'] = self.model.batch_size
         else:
             config['batch_size'] = 'Not set'
+        
+        # Add initialization metadata if available
+        if hasattr(self.model, 'init_metadata'):
+            config['initialization_metadata'] = [
+                {
+                    'layer_index': meta.layer_index,
+                    'layer_type': meta.layer_type,
+                    'method': meta.method,
+                    'activation': meta.activation,
+                    'shape': meta.shape,
+                    'bias_value': meta.bias_value,
+                    'fan_in': meta.fan_in,
+                    'fan_out': meta.fan_out,
+                    'scale': meta.scale
+                }
+                for meta in self.model.init_metadata
+            ]
         
         return config
 
@@ -443,19 +477,19 @@ class ModelSummaryFormatter:
         lines = []
         
         # Header
-        lines.append("=" * 80)
-        lines.append(f"{f'Model: {model_name}':^80}")
-        lines.append("=" * 80)
+        lines.append("=" * 100)
+        lines.append(f"{f'Model: {model_name}':^100}")
+        lines.append("=" * 100)
         
         # Table header
         if any('details' in layer for layer in layer_info):
             # CNN format with details column
             lines.append(f"{'Layer (type)':<25} {'Output Shape':<20} {'Param #':<15} {'Details':<15}")
         else:
-            # ANN format with activation column
-            lines.append(f"{'Layer (type)':<25} {'Output Shape':<20} {'Param #':<15} {'Activation':<15}")
+            # ANN format with activation and initialization columns
+            lines.append(f"{'Layer (type)':<25} {'Output Shape':<20} {'Param #':<12} {'Activation':<15} {'Init Method':<20}")
         
-        lines.append("=" * 80)
+        lines.append("=" * 100)
         
         # Layer information
         for layer in layer_info:
@@ -468,11 +502,12 @@ class ModelSummaryFormatter:
                 details = layer['details'] or '-'
                 lines.append(f"{layer_name:<25} {output_shape:<20} {param_count:<15} {details:<15}")
             else:
-                # ANN format
+                # ANN format with initialization method
                 activation = layer['activation'] or '-'
-                lines.append(f"{layer_name:<25} {output_shape:<20} {param_count:<15} {activation:<15}")
+                init_method = layer.get('init_method', None) or '-'
+                lines.append(f"{layer_name:<25} {output_shape:<20} {param_count:<12} {activation:<15} {init_method:<20}")
         
-        lines.append("=" * 80)
+        lines.append("=" * 100)
         
         # Parameter summary
         lines.append(f"Total params: {param_counts['total_params']:,}")
@@ -480,7 +515,7 @@ class ModelSummaryFormatter:
         lines.append(f"Non-trainable params: {param_counts['non_trainable_params']:,}")
         
         # Memory usage
-        lines.append("_" * 80)
+        lines.append("_" * 100)
         lines.append("Memory usage:")
         lines.append(f"  Parameters: ~{memory_usage['parameters_mb']:.2f} MB")
         lines.append(f"  Activations (est.): ~{memory_usage['activations_mb']:.2f} MB")
@@ -488,7 +523,7 @@ class ModelSummaryFormatter:
         lines.append(f"  Total (inference): ~{memory_usage['total_inference_mb']:.2f} MB")
         
         # Model configuration
-        lines.append("_" * 80)
+        lines.append("_" * 100)
         lines.append("Model Configuration:")
         lines.append(f"  Loss function: {configuration['loss_function']}")
         lines.append(f"  L2 regularization: {configuration['l2_regularization']}")
@@ -496,7 +531,7 @@ class ModelSummaryFormatter:
         lines.append(f"  Optimizer: {configuration['optimizer']}")
         lines.append(f"  Device: {configuration['device']}")
         
-        lines.append("=" * 80)
+        lines.append("=" * 100)
         
         return "\n".join(lines)
     
