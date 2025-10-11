@@ -486,3 +486,75 @@ class ModelValidator:
         if initial_weights not in valid_weights:
             raise ValueError(f"Unsupported initial_weights '{initial_weights}'. "
                            f"Supported strategies: {sorted(valid_weights)}")
+    
+    def validate_weight_init(self, weight_init, num_layers=None):
+        """
+        Validate weight initialization parameter.
+        
+        Args:
+            weight_init: Weight initialization strategy (str or list)
+            num_layers: Number of layers (required if weight_init is a list)
+            
+        Raises:
+            ValueError: If weight_init is invalid
+            TypeError: If type is incorrect
+        """
+        valid_methods = {
+            'auto', 'he_normal', 'he_uniform', 
+            'xavier_normal', 'xavier_uniform', 'glorot_normal', 'glorot_uniform',
+            'lecun_normal', 'lecun_uniform',
+            'random_normal', 'random_uniform',
+            'zeros', 'ones'
+        }
+        
+        if isinstance(weight_init, str):
+            if weight_init not in valid_methods:
+                raise ValueError(
+                    f"Unsupported weight initialization '{weight_init}'. "
+                    f"Supported methods: {sorted(valid_methods)}"
+                )
+        elif isinstance(weight_init, (list, tuple)):
+            if num_layers is None:
+                raise ValueError("num_layers must be provided when weight_init is a list")
+            if len(weight_init) != num_layers:
+                raise ValueError(
+                    f"Length of weight_init list ({len(weight_init)}) must match "
+                    f"number of layers ({num_layers})"
+                )
+            for i, method in enumerate(weight_init):
+                if not isinstance(method, str):
+                    raise TypeError(
+                        f"All weight initialization methods must be strings. "
+                        f"Method at index {i} has type {type(method)}"
+                    )
+                if method not in valid_methods:
+                    raise ValueError(
+                        f"Unsupported weight initialization '{method}' at layer {i}. "
+                        f"Supported methods: {sorted(valid_methods)}"
+                    )
+        else:
+            raise TypeError(
+                f"weight_init must be a string or list, got {type(weight_init)}"
+            )
+    
+    def validate_bias_init(self, bias_init):
+        """
+        Validate bias initialization parameter.
+        
+        Args:
+            bias_init: Bias initialization strategy (str or float)
+            
+        Raises:
+            ValueError: If bias_init is invalid
+            TypeError: If type is incorrect
+        """
+        if isinstance(bias_init, str):
+            if bias_init not in {'auto', 'zeros'}:
+                raise ValueError(
+                    f"Unsupported bias initialization '{bias_init}'. "
+                    f"Supported: 'auto', 'zeros', or a float value"
+                )
+        elif not isinstance(bias_init, (int, float, np.number)):
+            raise TypeError(
+                f"bias_init must be a string or number, got {type(bias_init)}"
+            )

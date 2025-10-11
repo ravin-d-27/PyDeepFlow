@@ -10,7 +10,14 @@ from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
 from pydeepflow.cross_validator import CrossValidator
 from pydeepflow.batch_normalization import BatchNormalization
-from pydeepflow.weight_initialization import get_weight_initializer
+from pydeepflow.weight_initialization import (
+    get_weight_initializer, 
+    initialize_weights, 
+    initialize_biases,
+    get_initializer_for_activation, 
+    WeightInitializer
+)
+
 from pydeepflow.optimizers import Adam, RMSprop
 from tqdm import tqdm
 from pydeepflow.validation import ModelValidator
@@ -136,8 +143,33 @@ def col2im_indices(cols, X_shape, filter_height, filter_width, padding=0, stride
 class ConvLayer:
     """
     2D convolutional layer (channels-last) implemented via im2col.
+    
+    Parameters
+    ----------
+    in_channels : int
+        Number of input channels.
+    out_channels : int
+        Number of output channels (filters).
+    kernel_size : int
+        Size of the convolutional kernel (assumes square kernel).
+    stride : int, optional
+        Stride for the convolution operation (default is 1).
+    padding : int, optional
+        Padding to add to the input (default is 0).
+    device : Device, optional
+        Device object for array operations (default is CPU).
+    activation : str, optional
+        Activation function to be used after this layer (default is 'relu').
+        Used for automatic weight initialization selection.
+    weight_init : str, optional
+        Weight initialization strategy. Options:
+        - 'auto': Automatically select based on activation function (default)
+        - 'he_normal', 'he_uniform': He/Kaiming initialization
+        - 'xavier_normal', 'xavier_uniform': Xavier/Glorot initialization
+        - 'lecun_normal', 'lecun_uniform': LeCun initialization
     """
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, device=None):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, 
+                 device=None, activation='relu', weight_init='auto'):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.Fh = kernel_size
@@ -145,16 +177,37 @@ class ConvLayer:
         self.stride = stride
         self.padding = padding
         self.device = device if device is not None else Device(use_gpu=False)
+        self.activation = activation
 
-        # He/Kaiming initialization
-        scale = np.sqrt(2.0 / (self.Fh * self.Fw * self.in_channels))
-        W_init = self.device.random().randn(self.Fh, self.Fw, self.in_channels, self.out_channels) * scale
-        b_init = self.device.zeros((1, 1, 1, self.out_channels))
+        # Initialize using WeightInitializer for proper activation-aware initialization
+        initializer = WeightInitializer(
+            device=self.device,
+            mode='auto' if weight_init == 'auto' else 'manual',
+            method=weight_init if weight_init != 'auto' else None,
+            bias_init='auto'
+        )
+        
+        # Initialize weights and biases using the new system
+        W_init, b_init, metadata = initializer.initialize_conv_layer(
+            kernel_h=self.Fh,
+            kernel_w=self.Fw,
+            in_channels=self.in_channels,
+            out_channels=self.out_channels,
+            activation=activation
+        )
+        
+        # Convert to device arrays and reshape bias for broadcasting
+        # Bias shape needs to be (1, 1, 1, out_channels) for proper broadcasting
+        W_init = self.device.array(W_init)
+        b_init = self.device.array(b_init.reshape(1, 1, 1, self.out_channels))
 
-        # store params in a dict for clarity
+        # Store params in a dict for clarity
         self.params = {'W': W_init, 'b': b_init}
         self.grads = {'dW': None, 'db': None}
         self.cache = None
+        
+        # Store initialization metadata for introspection
+        self.init_metadata = metadata
 
     def forward(self, X):
         """ X shape: (N, H, W, C_prev) """
@@ -273,7 +326,9 @@ class Multi_Layer_ANN:
         batch_norm_layers (list): A list of BatchNormalization layers.
     """
     def __init__(self, X_train, Y_train, hidden_layers, activations, loss='categorical_crossentropy',
-                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd', learning_rate=0.01, epochs=100, batch_size=32, initial_weights='auto'):
+            use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, 
+            optimizer='sgd', learning_rate=0.01, epochs=100, batch_size=32, 
+            weight_init='auto', bias_init='auto'):
         """
         Initializes the Multi_Layer_ANN.
 
@@ -287,6 +342,20 @@ class Multi_Layer_ANN:
             l2_lambda (float, optional): The L2 regularization parameter. Defaults to 0.0.
             dropout_rate (float, optional): The dropout rate for regularization. Defaults to 0.0.
             use_batch_norm (bool, optional): If True, batch normalization will be applied. Defaults to False.
+            weight_init : str or list, optional
+                Weight initialization strategy. Options:
+                - 'auto': Automatically select based on activation functions (default)
+                - 'he_normal', 'he_uniform': He/Kaiming initialization (good for ReLU)
+                - 'xavier_normal', 'xavier_uniform': Xavier/Glorot initialization (good for sigmoid/tanh)
+                - 'lecun_normal', 'lecun_uniform': LeCun initialization (good for SELU)
+                - 'random_normal', 'random_uniform': Simple random initialization
+                - list: Layer-specific initialization methods
+            bias_init : str or float, optional
+                Bias initialization strategy. Options:
+                - 'auto': Activation-aware initialization (default)
+                - 'zeros': All zeros
+                - float: Custom constant value
+        
 
         Raises:
             ValueError: If the number of activation functions does not match the number of hidden layers.
@@ -301,25 +370,13 @@ class Multi_Layer_ANN:
         validator.validate_loss_function(loss)
         validator.validate_regularization_params(l2_lambda, dropout_rate)
         validator.validate_optimizer(optimizer)
-        validator.validate_initial_weights(initial_weights)
         
         # Validate and adjust batch_size
         self.batch_size = validator.validate_training_hyperparameters(
             learning_rate, epochs, batch_size, X_train
         )
-    # (Redundant ModelValidator import and validation removed)
-        validator.validate_activations(activations, hidden_layers)
-        validator.validate_loss_function(loss)
         
-        # Validate parameters
-        validator.validate_regularization_params(l2_lambda, dropout_rate)
-        validator.validate_optimizer(optimizer)
-        
-        # Validate hyperparameters and get adjusted batch_size
-        adjusted_batch_size = validator.validate_training_hyperparameters(
-            learning_rate, epochs, batch_size, X_train)
-        self.batch_size = adjusted_batch_size
-        
+        # Initialize device FIRST (needed for weight initialization)
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
 
@@ -332,9 +389,6 @@ class Multi_Layer_ANN:
             self.output_activation = 'softmax'
 
         self.activations = activations
-        self.weights = []
-        self.biases = []
-
         
         if len(self.activations) != len(hidden_layers):
             raise ValueError("The number of activation functions must match the number of hidden layers.")
@@ -347,13 +401,60 @@ class Multi_Layer_ANN:
         # Move training data to the device (GPU or CPU)
         self.X_train = self.device.array(X_train)
         self.y_train = self.device.array(Y_train)
-
-        # Initialize weights and biases with He initialization for better convergence
+        
+        # Validate weight_init and bias_init parameters
+        num_weight_layers = len(self.layers) - 1
+        validator.validate_weight_init(weight_init, num_layers=num_weight_layers)
+        validator.validate_bias_init(bias_init)
+        
+        # Determine initialization mode and create WeightInitializer
+        if weight_init == 'auto':
+            weight_initializer = WeightInitializer(
+                device=self.device, 
+                mode='auto',
+                bias_init=bias_init
+            )
+        elif isinstance(weight_init, list):
+            # Layer-specific initialization
+            weight_initializer = WeightInitializer(
+                device=self.device,
+                mode='manual',
+                method=weight_init,
+                bias_init=bias_init
+            )
+        else:
+            # Manual mode with single method for all layers
+            weight_initializer = WeightInitializer(
+                device=self.device,
+                mode='manual',
+                method=weight_init,
+                bias_init=bias_init
+            )
+        
+        # Initialize weights and biases using the new WeightInitializer system
+        self.weights = []
+        self.biases = []
+        self.init_metadata = []  # Store initialization metadata for introspection
+        
         for i in range(len(self.layers) - 1):
-            weight_matrix = self.device.random().randn(self.layers[i], self.layers[i + 1]) * np.sqrt(2 / self.layers[i])
-            bias_vector = self.device.zeros((1, self.layers[i + 1]))
-            self.weights.append(weight_matrix)
-            self.biases.append(bias_vector)
+            # Get the activation function for this layer
+            if i < len(self.activations):
+                activation_fn = self.activations[i]
+            else:
+                # Output layer uses output_activation
+                activation_fn = self.output_activation
+            
+            # Initialize weights and biases using WeightInitializer
+            W, b, metadata = weight_initializer.initialize_dense_layer(
+                input_dim=self.layers[i],
+                output_dim=self.layers[i + 1],
+                activation=activation_fn
+            )
+            
+            # Convert to device arrays and reshape bias to (1, n) for broadcasting
+            self.weights.append(self.device.array(W))
+            self.biases.append(self.device.array(b.reshape(1, -1)))
+            self.init_metadata.append(metadata)
 
         # Initialize training attribute
         self.training = False
@@ -725,6 +826,49 @@ class Multi_Layer_ANN:
             layer_info, param_counts, memory_usage, configuration
         )
         return introspector.get_model_info()
+
+    def get_initialization_info(self):
+        """
+        Retrieve initialization metadata for all layers.
+        
+        Returns detailed information about how each layer's weights and biases
+        were initialized, including the method used, activation function, shape,
+        and scaling factors.
+        
+        Returns
+        -------
+        list of InitializationMetadata
+            List of metadata objects, one for each layer in the network.
+            Each metadata object contains:
+            - layer_index: Index of the layer (0-based)
+            - layer_type: Type of layer ('dense' or 'conv')
+            - method: Initialization method used (e.g., 'he_normal', 'xavier_uniform')
+            - activation: Activation function for the layer
+            - shape: Shape of the weight matrix/tensor
+            - bias_value: Value used for bias initialization
+            - fan_in: Number of input connections
+            - fan_out: Number of output connections
+            - scale: Scaling factor used in initialization
+        
+        Examples
+        --------
+        >>> model = Multi_Layer_ANN(X_train, y_train, [128, 64], ['relu', 'relu'])
+        >>> init_info = model.get_initialization_info()
+        >>> for metadata in init_info:
+        ...     print(metadata)
+        Layer 0 (dense): he_normal for relu, shape=(784, 128), scale=0.0535
+        Layer 1 (dense): he_normal for relu, shape=(128, 64), scale=0.1768
+        Layer 2 (dense): he_normal for softmax, shape=(64, 10), scale=0.2500
+        
+        Notes
+        -----
+        This method is useful for:
+        - Debugging initialization issues
+        - Understanding model configuration
+        - Verifying that appropriate initialization methods were selected
+        - Documenting model architecture for reproducibility
+        """
+        return self.init_metadata
 
     def _validate_inputs(self, X_train, Y_train, hidden_layers, activations, loss, 
                         l2_lambda, dropout_rate, optimizer, learning_rate, epochs, batch_size, initial_weights):
@@ -1108,7 +1252,7 @@ class Multi_Layer_CNN:
     A Sequential Model wrapper that chains Convolutional, Flatten, and Dense layers.
     It implements end-to-end forward propagation and backpropagation for CNN training.
     """
-    def __init__(self, layers_list, X_train, Y_train, loss='categorical_crossentropy',
+    def __init__(self, layers_list, X_train, Y_train, activations, loss='categorical_crossentropy',
                  use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd'):
         
         # Validate inputs before proceeding with initialization

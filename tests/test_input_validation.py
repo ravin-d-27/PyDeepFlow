@@ -544,5 +544,246 @@ class TestInputValidation(unittest.TestCase):
         self.assertIn("must be a string", str(context.exception))
 
 
+
+class TestWeightInitValidation(unittest.TestCase):
+    """Test validation for weight_init and bias_init parameters."""
+    
+    def setUp(self):
+        """Set up validator instance for testing."""
+        from pydeepflow.validation import ModelValidator
+        self.validator = ModelValidator()
+    
+    # Test validate_weight_init with string input
+    def test_weight_init_valid_string(self):
+        """Test valid weight_init string values."""
+        valid_methods = [
+            'auto', 'he_normal', 'he_uniform',
+            'xavier_normal', 'xavier_uniform', 'glorot_normal', 'glorot_uniform',
+            'lecun_normal', 'lecun_uniform',
+            'random_normal', 'random_uniform',
+            'zeros', 'ones'
+        ]
+        
+        for method in valid_methods:
+            try:
+                self.validator.validate_weight_init(method)
+            except Exception as e:
+                self.fail(f"Valid method '{method}' raised exception: {e}")
+    
+    def test_weight_init_invalid_string(self):
+        """Test invalid weight_init string values."""
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_weight_init('invalid_method')
+        self.assertIn("Unsupported weight initialization", str(context.exception))
+        self.assertIn("invalid_method", str(context.exception))
+        # Verify error message lists supported methods
+        self.assertIn("Supported methods:", str(context.exception))
+    
+    def test_weight_init_wrong_type(self):
+        """Test weight_init with wrong type."""
+        with self.assertRaises(TypeError) as context:
+            self.validator.validate_weight_init(123)
+        self.assertIn("must be a string or list", str(context.exception))
+        
+        with self.assertRaises(TypeError) as context:
+            self.validator.validate_weight_init({'method': 'he_normal'})
+        self.assertIn("must be a string or list", str(context.exception))
+    
+    # Test validate_weight_init with list input
+    def test_weight_init_valid_list(self):
+        """Test valid weight_init list values."""
+        methods_list = ['he_normal', 'xavier_uniform', 'lecun_normal']
+        num_layers = 3
+        
+        try:
+            self.validator.validate_weight_init(methods_list, num_layers=num_layers)
+        except Exception as e:
+            self.fail(f"Valid list raised exception: {e}")
+    
+    def test_weight_init_list_without_num_layers(self):
+        """Test weight_init list without num_layers parameter."""
+        methods_list = ['he_normal', 'xavier_uniform']
+        
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_weight_init(methods_list)
+        self.assertIn("num_layers must be provided", str(context.exception))
+    
+    def test_weight_init_list_length_mismatch(self):
+        """Test weight_init list length doesn't match num_layers."""
+        methods_list = ['he_normal', 'xavier_uniform']
+        num_layers = 3
+        
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_weight_init(methods_list, num_layers=num_layers)
+        self.assertIn("Length of weight_init list", str(context.exception))
+        self.assertIn("must match number of layers", str(context.exception))
+        self.assertIn("2", str(context.exception))  # list length
+        self.assertIn("3", str(context.exception))  # num_layers
+    
+    def test_weight_init_list_with_invalid_method(self):
+        """Test weight_init list containing invalid method."""
+        methods_list = ['he_normal', 'invalid_method', 'xavier_uniform']
+        num_layers = 3
+        
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_weight_init(methods_list, num_layers=num_layers)
+        self.assertIn("Unsupported weight initialization", str(context.exception))
+        self.assertIn("invalid_method", str(context.exception))
+        self.assertIn("at layer 1", str(context.exception))
+    
+    def test_weight_init_list_with_non_string_element(self):
+        """Test weight_init list containing non-string element."""
+        methods_list = ['he_normal', 123, 'xavier_uniform']
+        num_layers = 3
+        
+        with self.assertRaises(TypeError) as context:
+            self.validator.validate_weight_init(methods_list, num_layers=num_layers)
+        self.assertIn("must be strings", str(context.exception))
+        self.assertIn("at index 1", str(context.exception))
+    
+    def test_weight_init_tuple_input(self):
+        """Test weight_init with tuple input (should work like list)."""
+        methods_tuple = ('he_normal', 'xavier_uniform', 'lecun_normal')
+        num_layers = 3
+        
+        try:
+            self.validator.validate_weight_init(methods_tuple, num_layers=num_layers)
+        except Exception as e:
+            self.fail(f"Valid tuple raised exception: {e}")
+    
+    # Test validate_bias_init
+    def test_bias_init_valid_string(self):
+        """Test valid bias_init string values."""
+        valid_values = ['auto', 'zeros']
+        
+        for value in valid_values:
+            try:
+                self.validator.validate_bias_init(value)
+            except Exception as e:
+                self.fail(f"Valid value '{value}' raised exception: {e}")
+    
+    def test_bias_init_invalid_string(self):
+        """Test invalid bias_init string values."""
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_bias_init('invalid_value')
+        self.assertIn("Unsupported bias initialization", str(context.exception))
+        self.assertIn("invalid_value", str(context.exception))
+        # Verify error message lists supported options
+        self.assertIn("'auto'", str(context.exception))
+        self.assertIn("'zeros'", str(context.exception))
+        self.assertIn("float value", str(context.exception))
+    
+    def test_bias_init_valid_numeric(self):
+        """Test valid bias_init numeric values."""
+        valid_values = [0.0, 0.01, -0.01, 1.0, 0.5, 0, 1]
+        
+        for value in valid_values:
+            try:
+                self.validator.validate_bias_init(value)
+            except Exception as e:
+                self.fail(f"Valid numeric value {value} raised exception: {e}")
+    
+    def test_bias_init_numpy_numeric(self):
+        """Test bias_init with numpy numeric types."""
+        valid_values = [
+            np.float32(0.01),
+            np.float64(0.01),
+            np.int32(0),
+            np.int64(1)
+        ]
+        
+        for value in valid_values:
+            try:
+                self.validator.validate_bias_init(value)
+            except Exception as e:
+                self.fail(f"Valid numpy value {value} raised exception: {e}")
+    
+    def test_bias_init_wrong_type(self):
+        """Test bias_init with wrong type."""
+        with self.assertRaises(TypeError) as context:
+            self.validator.validate_bias_init([0.01])
+        self.assertIn("must be a string or number", str(context.exception))
+        
+        with self.assertRaises(TypeError) as context:
+            self.validator.validate_bias_init({'value': 0.01})
+        self.assertIn("must be a string or number", str(context.exception))
+        
+        with self.assertRaises(TypeError) as context:
+            self.validator.validate_bias_init(None)
+        self.assertIn("must be a string or number", str(context.exception))
+    
+    # Edge cases
+    def test_weight_init_empty_list(self):
+        """Test weight_init with empty list matches 0 layers."""
+        # Empty list with 0 layers should technically match (length check passes)
+        # but this is an edge case that would be caught elsewhere (0 layers is invalid)
+        try:
+            self.validator.validate_weight_init([], num_layers=0)
+            # If it doesn't raise, that's fine - the length matches
+        except ValueError:
+            # If it raises, that's also acceptable
+            pass
+    
+    def test_weight_init_single_element_list(self):
+        """Test weight_init with single element list."""
+        methods_list = ['he_normal']
+        num_layers = 1
+        
+        try:
+            self.validator.validate_weight_init(methods_list, num_layers=num_layers)
+        except Exception as e:
+            self.fail(f"Single element list raised exception: {e}")
+    
+    def test_weight_init_large_list(self):
+        """Test weight_init with large list."""
+        num_layers = 50
+        methods_list = ['he_normal'] * num_layers
+        
+        try:
+            self.validator.validate_weight_init(methods_list, num_layers=num_layers)
+        except Exception as e:
+            self.fail(f"Large list raised exception: {e}")
+    
+    def test_bias_init_extreme_values(self):
+        """Test bias_init with extreme numeric values."""
+        extreme_values = [1e10, -1e10, 1e-10, -1e-10]
+        
+        for value in extreme_values:
+            try:
+                self.validator.validate_bias_init(value)
+            except Exception as e:
+                self.fail(f"Extreme value {value} raised exception: {e}")
+    
+    def test_weight_init_case_sensitivity(self):
+        """Test that weight_init is case-sensitive."""
+        # 'He_Normal' should be invalid (case matters)
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_weight_init('He_Normal')
+        self.assertIn("Unsupported weight initialization", str(context.exception))
+    
+    def test_bias_init_case_sensitivity(self):
+        """Test that bias_init is case-sensitive."""
+        # 'Auto' should be invalid (case matters)
+        with self.assertRaises(ValueError) as context:
+            self.validator.validate_bias_init('Auto')
+        self.assertIn("Unsupported bias initialization", str(context.exception))
+    
+    def test_weight_init_all_methods_in_list(self):
+        """Test weight_init list with all supported methods."""
+        all_methods = [
+            'auto', 'he_normal', 'he_uniform',
+            'xavier_normal', 'xavier_uniform', 'glorot_normal', 'glorot_uniform',
+            'lecun_normal', 'lecun_uniform',
+            'random_normal', 'random_uniform',
+            'zeros', 'ones'
+        ]
+        num_layers = len(all_methods)
+        
+        try:
+            self.validator.validate_weight_init(all_methods, num_layers=num_layers)
+        except Exception as e:
+            self.fail(f"List with all methods raised exception: {e}")
+
+
 if __name__ == '__main__':
     unittest.main()
