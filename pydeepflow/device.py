@@ -1,8 +1,10 @@
 import numpy as np
 try:
     import cupy as cp
+    CUPY_AVAILABLE = True
 except ImportError:
     cp = None
+    CUPY_AVAILABLE = False
 
 class Device:
     """
@@ -27,9 +29,11 @@ class Device:
     """
     
     def __init__(self, use_gpu=False):
-        self.use_gpu = use_gpu
-        if use_gpu and cp is None:
-            raise ValueError("CuPy is not installed, please install CuPy for GPU support.")
+        if use_gpu and not CUPY_AVAILABLE:
+            print("Warning: CuPy is not installed. Falling back to CPU.")
+            self.use_gpu = False
+        else:
+            self.use_gpu = use_gpu    
 
     def abs(self, x):
         """
@@ -46,7 +50,22 @@ class Device:
             The absolute value of each element in `x`.
         """
         return cp.abs(x) if self.use_gpu else np.abs(x)
-
+    
+    def square(self, x):
+        """
+        Computes the square of each element in the input array.
+    
+        Parameters:
+        -----------
+        x : np.ndarray or cp.ndarray
+            The input array.
+    
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            The element-wise square of the input.
+        """
+        return cp.square(x) if self.use_gpu else np.square(x)
 
     def array(self, data):
         """

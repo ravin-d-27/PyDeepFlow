@@ -159,6 +159,30 @@ regression_results = ann_regression.evaluate(
 print(regression_results)
 
 
+## **GPU and CPU Support**
+
+`PyDeepFlow` is designed to be flexible and can run on both CPUs and NVIDIA GPUs.
+
+### **CPU-Only (Default)**
+
+By default, `PyDeepFlow` uses `NumPy` for all computations and will run on your CPU. The standard installation is all you need:
+
+```bash
+pip install pydeepflow
+```
+
+### **GPU Acceleration**
+If you have an NVIDIA GPU and have installed the CUDA toolkit, you can enable GPU acceleration by installing `CuPy`.
+To install the library with GPU support, use the following command:
+
+```bash
+pip install pydeepflow[gpu]
+```
+
+If you try to use the GPU functionality without `CuPy` installed, the library will print a warning and safely fall back to using the CPU.
+
+
+
 ## **Contributing to Pydeepflow on GitHub**
 
 Contributions are welcome! If you would like to contribute to `pydeepflow`, follow these steps:

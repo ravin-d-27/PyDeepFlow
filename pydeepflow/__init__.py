@@ -37,13 +37,13 @@ __all__ = [
     "ModelCheckpoint",
     "Regularization",
     "EarlyStopping",
-    "CrossValidator",  
+    "CrossValidator",
     "BatchNormalization",
     "GridSearchCV",
     "ModelValidator",
-    "ModelIntrospector",
     "ANNIntrospector", 
     "CNNIntrospector",
+    "ModelSummaryFormatter",
     "create_introspector",
 ]
 
