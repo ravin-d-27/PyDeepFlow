@@ -1,6 +1,7 @@
 # cross_validator.py
 import numpy as np
 from sklearn.model_selection import KFold
+from .metrics import precision_score,recall_score,f1_score
 
 class CrossValidator:
     def __init__(self, n_splits=5):
@@ -39,9 +40,19 @@ class CrossValidator:
         Returns:
             dict: A dictionary containing the requested metrics.
         """
-        results = {}
+
+        results={}
         for metric in metrics:
             if metric == "accuracy":
                 results['accuracy'] = np.mean(y_true == y_pred)
+
+            elif metric == "precision":
+                results['precision'] = precision_score(y_true,y_pred)
+                
+            elif metric == "recall":
+                results['recall'] = recall_score(y_true,y_pred)
+
+            elif metric == "f1": 
+                results['f1'] = f1_score(y_true,y_pred)
             
         return results
