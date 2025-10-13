@@ -63,393 +63,122 @@ class BaseModelIntrospector(ABC):
 
 
 class ANNIntrospector(BaseModelIntrospector):
-    """
-    Model introspector for Artificial Neural Networks (Dense/Fully-Connected layers).
-    
-    This class provides detailed analysis capabilities for ANN models including
-    parameter counting, memory estimation, and architecture visualization.
-    """
-    
+    # This is the original, correct implementation for ANNs.
     def __init__(self, model):
-        """
-        Initialize the ANN introspector.
-        
-        Args:
-            model: Multi_Layer_ANN instance to introspect
-        """
         self.model = model
-    
+
     def get_layer_info(self):
-        """
-        Extract detailed information about each layer in the ANN.
-        
-        Returns:
-            list: List of dictionaries containing:
-                - name: Layer name (e.g., 'Input', 'Dense_1')
-                - type: Layer type (e.g., 'Input', 'Dense', 'Dense (Output)')
-                - input_shape: Input tensor shape
-                - output_shape: Output tensor shape
-                - params: Number of parameters in the layer
-                - activation: Activation function name
-                - init_method: Weight initialization method (if available)
-        """
         layer_info = []
-        
-        # Input layer
         layer_info.append({
-            'name': 'Input',
-            'type': 'Input',
-            'input_shape': (None, self.model.layers[0]),
-            'output_shape': (None, self.model.layers[0]),
-            'params': 0,
-            'activation': None,
-            'init_method': None
+            'name': 'Input', 'type': 'Input', 'input_shape': (None, self.model.layers[0]),
+            'output_shape': (None, self.model.layers[0]), 'params': 0,
+            'activation': None, 'init_method': None
         })
-        
-        # Hidden layers
         for i in range(len(self.model.layers) - 2):
             layer_params = (self.model.layers[i] + 1) * self.model.layers[i+1]
-            
-            # Get initialization method from metadata if available
-            init_method = None
-            if hasattr(self.model, 'init_metadata') and i < len(self.model.init_metadata):
-                init_method = self.model.init_metadata[i].method
-            
+            init_method = self.model.init_metadata[i].method if hasattr(self.model, 'init_metadata') and i < len(self.model.init_metadata) else None
             layer_info.append({
-                'name': f'Dense_{i+1}',
-                'type': 'Dense',
-                'input_shape': (None, self.model.layers[i]),
-                'output_shape': (None, self.model.layers[i+1]),
-                'params': layer_params,
-                'activation': self.model.activations[i],
-                'init_method': init_method
+                'name': f'Dense_{i+1}', 'type': 'Dense', 'input_shape': (None, self.model.layers[i]),
+                'output_shape': (None, self.model.layers[i+1]), 'params': layer_params,
+                'activation': self.model.activations[i], 'init_method': init_method
             })
-        
-        # Output layer
         output_params = (self.model.layers[-2] + 1) * self.model.layers[-1]
         output_layer_idx = len(self.model.layers) - 2
-        
-        # Get initialization method for output layer
-        init_method = None
-        if hasattr(self.model, 'init_metadata') and output_layer_idx < len(self.model.init_metadata):
-            init_method = self.model.init_metadata[output_layer_idx].method
-        
+        init_method = self.model.init_metadata[output_layer_idx].method if hasattr(self.model, 'init_metadata') and output_layer_idx < len(self.model.init_metadata) else None
         layer_info.append({
-            'name': f'Dense_{len(self.model.layers)-1}',
-            'type': 'Dense (Output)',
-            'input_shape': (None, self.model.layers[-2]),
-            'output_shape': (None, self.model.layers[-1]),
-            'params': output_params,
-            'activation': self.model.output_activation,
-            'init_method': init_method
+            'name': f'Dense_{len(self.model.layers)-1}', 'type': 'Dense (Output)',
+            'input_shape': (None, self.model.layers[-2]), 'output_shape': (None, self.model.layers[-1]),
+            'params': output_params, 'activation': self.model.output_activation, 'init_method': init_method
         })
-        
         return layer_info
-    
+
     def calculate_parameters(self):
-        """
-        Calculate parameter counts for the ANN model.
-        
-        Returns:
-            dict: Dictionary containing:
-                - total_params: Total number of parameters
-                - trainable_params: Number of trainable parameters
-                - non_trainable_params: Number of non-trainable parameters
-        """
-        total_params = 0
-        
-        # Calculate parameters for each layer: (input_size + 1) * output_size
-        for i in range(len(self.model.layers) - 1):
-            layer_params = (self.model.layers[i] + 1) * self.model.layers[i+1]
-            total_params += layer_params
-        
-        return {
-            'total_params': int(total_params),
-            'trainable_params': int(total_params),  # All params are trainable in basic ANN
-            'non_trainable_params': 0
-        }
-    
+        total_params = sum((self.model.layers[i] + 1) * self.model.layers[i+1] for i in range(len(self.model.layers) - 1))
+        return {'total_params': int(total_params), 'trainable_params': int(total_params), 'non_trainable_params': 0}
+
     def estimate_memory_usage(self, batch_size=32):
-        """
-        Estimate memory usage for ANN training and inference.
-        
-        Args:
-            batch_size (int): Batch size for estimation
-            
-        Returns:
-            dict: Dictionary containing memory estimates in MB:
-                - parameters_mb: Memory for model parameters
-                - activations_mb: Memory for activations during forward pass
-                - total_training_mb: Total memory for training
-                - total_inference_mb: Total memory for inference
-        """
         param_counts = self.calculate_parameters()
-        
-        # Memory for parameters (assuming float32 = 4 bytes per parameter)
         param_memory_mb = (param_counts['total_params'] * 4) / (1024 * 1024)
-        
-        # Memory for activations (estimate based on largest layer)
-        # Use actual batch_size if available from model
         actual_batch_size = getattr(self.model, 'batch_size', batch_size)
         max_layer_size = max(self.model.layers)
         activation_memory_mb = (max_layer_size * actual_batch_size * 4) / (1024 * 1024)
-        
-        return {
-            'parameters_mb': param_memory_mb,
-            'activations_mb': activation_memory_mb,
-            'total_training_mb': param_memory_mb + activation_memory_mb,
-            'total_inference_mb': param_memory_mb
-        }
-    
+        return {'parameters_mb': param_memory_mb, 'activations_mb': activation_memory_mb, 'total_training_mb': param_memory_mb + activation_memory_mb, 'total_inference_mb': param_memory_mb}
+
     def get_model_configuration(self):
-        """
-        Extract ANN model configuration information.
-        
-        Returns:
-            dict: Dictionary containing model configuration:
-                - loss_function: Loss function name
-                - l2_regularization: L2 regularization parameter
-                - dropout_rate: Dropout rate
-                - optimizer: Optimizer name
-                - device: Device type (CPU/GPU)
-                - batch_size: Batch size (if available)
-                - initialization_metadata: List of initialization metadata (if available)
-        """
-        # Determine optimizer name
-        optimizer_name = "SGD"  # Default
+        optimizer_name = "SGD"
         if hasattr(self.model, 'optimizer') and self.model.optimizer is not None:
             optimizer_name = type(self.model.optimizer).__name__
-        
-        # Device information
         device_type = "GPU" if self.model.device.use_gpu else "CPU"
-        
-        config = {
-            'loss_function': self.model.loss,
-            'l2_regularization': self.model.regularization.l2_lambda,
-            'dropout_rate': self.model.regularization.dropout_rate,
-            'optimizer': optimizer_name,
-            'device': device_type
-        }
-        
-        # Add batch_size if available
-        if hasattr(self.model, 'batch_size'):
-            config['batch_size'] = self.model.batch_size
-        else:
-            config['batch_size'] = 'Not set'
-        
-        # Add initialization metadata if available
+        config = {'loss_function': self.model.loss, 'l2_regularization': self.model.regularization.l2_lambda, 'dropout_rate': self.model.regularization.dropout_rate, 'optimizer': optimizer_name, 'device': device_type}
+        config['batch_size'] = getattr(self.model, 'batch_size', 'Not set')
         if hasattr(self.model, 'init_metadata'):
-            config['initialization_metadata'] = [
-                {
-                    'layer_index': meta.layer_index,
-                    'layer_type': meta.layer_type,
-                    'method': meta.method,
-                    'activation': meta.activation,
-                    'shape': meta.shape,
-                    'bias_value': meta.bias_value,
-                    'fan_in': meta.fan_in,
-                    'fan_out': meta.fan_out,
-                    'scale': meta.scale
-                }
-                for meta in self.model.init_metadata
-            ]
-        
+            config['initialization_metadata'] = [{'layer_index': m.layer_index, 'layer_type': m.layer_type, 'method': m.method, 'activation': m.activation, 'shape': m.shape, 'bias_value': m.bias_value, 'fan_in': m.fan_in, 'fan_out': m.fan_out, 'scale': m.scale} for m in self.model.init_metadata]
         return config
 
 
 class CNNIntrospector(BaseModelIntrospector):
-    """
-    Model introspector for Convolutional Neural Networks.
-    
-    This class provides detailed analysis capabilities for CNN models including
-    convolutional layers, pooling layers, and mixed CNN+Dense architectures.
-    """
-    
     def __init__(self, model):
-        """
-        Initialize the CNN introspector.
-        
-        Args:
-            model: Multi_Layer_CNN instance to introspect
-        """
         self.model = model
-    
-    def get_layer_info(self):
-        """
-        Extract detailed information about each layer in the CNN.
-        
-        Returns:
-            list: List of dictionaries containing layer information
-        """
-        layer_info = []
-        current_shape = self.model.X_train.shape[1:]  # (H, W, C)
-        
-        # Input layer
-        layer_info.append({
-            'name': 'Input',
-            'type': 'Input',
-            'input_shape': (None,) + current_shape,
-            'output_shape': (None,) + current_shape,
-            'params': 0,
-            'activation': None,
-            'details': '-'
-        })
-        
-        # Process each layer in the CNN
-        for i, layer in enumerate(self.model.layers_list):
-            layer_name = f"{self._get_layer_type_name(layer)}_{i+1}"
-            
-            if hasattr(layer, 'params') and isinstance(layer.params, dict) and 'W' in layer.params:  # Conv layer
-                layer_params = np.prod(layer.params['W'].shape) + np.prod(layer.params['b'].shape)
-                
-                # Calculate output shape for conv layer
-                if hasattr(layer, 'stride') and hasattr(layer, 'padding'):
-                    H, W, C_in = current_shape
-                    kernel_size = getattr(layer, 'Fh', getattr(layer, 'kernel_size', 3))
-                    H_out = (H + 2 * layer.padding - kernel_size) // layer.stride + 1
-                    W_out = (W + 2 * layer.padding - kernel_size) // layer.stride + 1
-                    C_out = layer.out_channels
-                    current_shape = (H_out, W_out, C_out)
-                
-                kernel_size = getattr(layer, 'Fh', getattr(layer, 'kernel_size', 3))
-                details = f"k={kernel_size}, s={layer.stride}"
-                if hasattr(layer, 'padding') and layer.padding > 0:
-                    details += f", p={layer.padding}"
-                
-                layer_info.append({
-                    'name': layer_name,
-                    'type': 'Conv2D',
-                    'input_shape': layer_info[-1]['output_shape'],
-                    'output_shape': (None,) + current_shape,
-                    'params': layer_params,
-                    'activation': getattr(layer, 'activation', 'relu'),
-                    'details': details
-                })
-                
-            elif hasattr(layer, 'forward') and not (hasattr(layer, 'params') and 'W' in layer.params):  # Flatten layer
-                # Calculate flattened size
-                flattened_size = np.prod(current_shape)
-                current_shape = (flattened_size,)
-                
-                layer_info.append({
-                    'name': layer_name,
-                    'type': 'Flatten',
-                    'input_shape': layer_info[-1]['output_shape'],
-                    'output_shape': (None,) + current_shape,
-                    'params': 0,
-                    'activation': None,
-                    'details': 'Flatten operation'
-                })
-                
-            elif isinstance(layer, dict) and 'W' in layer:  # Dense layer
-                input_dim = current_shape[0]
-                output_dim = layer['W'].shape[1]
-                layer_params = np.prod(layer['W'].shape) + np.prod(layer['b'].shape)
-                current_shape = (output_dim,)
-                
-                layer_type = 'Dense (Output)' if i == len(self.model.layers_list) - 1 else 'Dense'
-                details = f"activation={layer['activation']}"
-                
-                layer_info.append({
-                    'name': layer_name,
-                    'type': layer_type,
-                    'input_shape': layer_info[-1]['output_shape'],
-                    'output_shape': (None,) + current_shape,
-                    'params': layer_params,
-                    'activation': layer['activation'],
-                    'details': details
-                })
-        
-        return layer_info
-    
-    def calculate_parameters(self):
-        """
-        Calculate parameter counts for the CNN model.
-        
-        Returns:
-            dict: Dictionary containing parameter counts
-        """
-        total_params = 0
-        
-        # Count parameters from trainable_params list
-        for param in self.model.trainable_params:
-            total_params += np.prod(param.shape)
-        
-        return {
-            'total_params': int(total_params),
-            'trainable_params': int(total_params),
-            'non_trainable_params': 0
-        }
-    
-    def estimate_memory_usage(self, batch_size=32):
-        """
-        Estimate memory usage for CNN training and inference.
-        
-        Args:
-            batch_size (int): Batch size for estimation
-            
-        Returns:
-            dict: Dictionary containing memory estimates in MB
-        """
-        param_counts = self.calculate_parameters()
-        
-        # Memory for parameters (assuming float32 = 4 bytes per parameter)
-        param_memory_mb = (param_counts['total_params'] * 4) / (1024 * 1024)
-        
-        # Memory for activations (estimate based on input size and largest feature maps)
-        input_size = np.prod(self.model.X_train.shape[1:])
-        activation_memory_mb = (input_size * batch_size * 4) / (1024 * 1024)
-        
-        return {
-            'parameters_mb': param_memory_mb,
-            'activations_mb': activation_memory_mb,
-            'total_training_mb': param_memory_mb + activation_memory_mb,
-            'total_inference_mb': param_memory_mb
-        }
-    
-    def get_model_configuration(self):
-        """
-        Extract CNN model configuration information.
-        
-        Returns:
-            dict: Dictionary containing model configuration
-        """
-        # Determine optimizer name
-        optimizer_name = "SGD"  # Default
-        if hasattr(self.model, 'optimizer') and self.model.optimizer is not None:
-            optimizer_name = type(self.model.optimizer).__name__
-        
-        # Device information
-        device_type = "GPU" if self.model.device.use_gpu else "CPU"
-        
-        return {
-            'loss_function': self.model.loss,
-            'l2_regularization': self.model.regularization.l2_lambda,
-            'dropout_rate': self.model.regularization.dropout_rate,
-            'optimizer': optimizer_name,
-            'device': device_type,
-            'batch_size': getattr(self.model, 'batch_size', 'Not set')
-        }
-    
-    def _get_layer_type_name(self, layer):
-        """
-        Get the type name for a layer.
-        
-        Args:
-            layer: Layer object
-            
-        Returns:
-            str: Layer type name
-        """
-        if hasattr(layer, 'params') and isinstance(layer.params, dict) and 'W' in layer.params:  # Conv layer
-            return 'Conv2D'
-        elif hasattr(layer, 'forward') and not (hasattr(layer, 'params') and 'W' in layer.params):  # Flatten
-            return 'Flatten'
-        elif isinstance(layer, dict):  # Dense layer
-            return 'Dense'
-        else:
-            return 'Unknown'
 
+    def get_layer_info(self):
+        from pydeepflow.model import ConvLayer, Flatten, MaxPooling2D, AveragePooling2D
+        layer_info = []
+        current_shape = self.model.X_train.shape[1:]
+        layer_info.append({'name': 'Input', 'type': 'Input', 'input_shape': (None,) + current_shape, 'output_shape': (None,) + current_shape, 'params': 0, 'activation': None, 'details': '-'})
+
+        layer_counts = {}
+        for i, layer in enumerate(self.model.layers_list):
+            layer_class_name = layer.__class__.__name__ if not isinstance(layer, dict) else 'Dense'
+            layer_counts[layer_class_name] = layer_counts.get(layer_class_name, 0) + 1
+            layer_name = f"{layer_class_name.replace('2D', '')}_{layer_counts[layer_class_name]}"
+            input_shape, params, activation, details = (None,) + current_shape, 0, None, '-'
+
+            if isinstance(layer, ConvLayer):
+                layer_type_name = 'Conv2D'
+                params = np.prod(layer.params['W'].shape) + np.prod(layer.params['b'].shape)
+                H, W, _ = current_shape
+                k, s, p = layer.Fh, layer.stride, layer.padding
+                out_h, out_w = (H + 2*p - k)//s + 1, (W + 2*p - k)//s + 1
+                current_shape = (out_h, out_w, layer.out_channels)
+                details = f"k={k}, s={s}, p={p}"
+                activation = getattr(layer, 'activation', None)
+            elif isinstance(layer, (MaxPooling2D, AveragePooling2D)):
+                layer_type_name = layer.__class__.__name__
+                H, W, C = current_shape
+                pool_h, pool_w, s = layer.pool_height, layer.pool_width, layer.stride
+                out_h, out_w = (H - pool_h)//s + 1, (W - pool_w)//s + 1
+                current_shape = (out_h, out_w, C)
+                details = f"pool=({pool_h},{pool_w}), s={s}"
+            elif isinstance(layer, Flatten):
+                layer_type_name = 'Flatten'
+                current_shape = (int(np.prod(current_shape)),)
+                details = "Flatten operation"
+            elif isinstance(layer, dict):
+                layer_type_name = 'Dense (Output)' if i == len(self.model.layers_list) - 1 else 'Dense'
+                params = np.prod(layer['W'].shape) + np.prod(layer['b'].shape)
+                current_shape = (layer['W'].shape[1],)
+                activation = layer.get('activation')
+                details = f"activation={activation}"
+            else:
+                layer_type_name = "Unknown"
+
+            layer_info.append({'name': layer_name, 'type': layer_type_name, 'input_shape': input_shape, 'output_shape': (None,) + current_shape, 'params': int(params), 'activation': activation, 'details': details})
+        return layer_info
+
+    def calculate_parameters(self):
+        total_params = sum(np.prod(p.shape) for p in self.model.trainable_params)
+        return {'total_params': int(total_params), 'trainable_params': int(total_params), 'non_trainable_params': 0}
+
+    def estimate_memory_usage(self, batch_size=32):
+        param_counts = self.calculate_parameters()
+        param_memory_mb = (param_counts['total_params'] * 4) / (1024 * 1024)
+        activation_memory_mb = (np.prod(self.model.X_train.shape[1:]) * batch_size * 4) / (1024 * 1024)
+        return {'parameters_mb': param_memory_mb, 'activations_mb': activation_memory_mb, 'total_training_mb': param_memory_mb + activation_memory_mb, 'total_inference_mb': param_memory_mb}
+
+    def get_model_configuration(self):
+        optimizer_name = type(self.model.optimizer).__name__ if hasattr(self.model, 'optimizer') and self.model.optimizer is not None else "SGD"
+        device_type = "GPU" if self.model.device.use_gpu else "CPU"
+        return {'loss_function': self.model.loss, 'l2_regularization': self.model.regularization.l2_lambda, 'dropout_rate': self.model.regularization.dropout_rate, 'optimizer': optimizer_name, 'device': device_type, 'batch_size': getattr(self.model, 'batch_size', 'Not set')}
 
 class ModelSummaryFormatter:
     """
