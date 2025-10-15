@@ -194,6 +194,22 @@ class Device:
         """
         return cp.tanh(x) if self.use_gpu else np.tanh(x)
 
+    def cosh(self, x):
+        """
+        Computes the hyperbolic cosine of the input array.
+
+        Parameters:
+        -----------
+        x : np.ndarray or cp.ndarray
+            The input array.
+
+        Returns:
+        --------
+        np.ndarray or cp.ndarray
+            The hyperbolic cosine of the input.
+        """
+        return cp.cosh(x) if self.use_gpu else np.cosh(x)
+
     def sum(self, x, axis=None, keepdims=False):
         """
         Sums the elements of an array along a specified axis.
