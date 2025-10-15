@@ -5,7 +5,8 @@ from pydeepflow.losses import (
     binary_crossentropy, mse, mse_derivative,
     categorical_crossentropy, categorical_crossentropy_derivative,
     hinge_loss, hinge_loss_derivative,
-    huber_loss, huber_loss_derivative
+    huber_loss, huber_loss_derivative,
+    log_cosh_loss, log_cosh_loss_derivative
 )
 from pydeepflow.device import Device
 
@@ -83,6 +84,22 @@ class TestLosses(unittest.TestCase):
         is_small = np.abs(error) <= delta
         expected = np.where(is_small, error, delta * np.sign(error))
         result = huber_loss_derivative(y_true, y_pred, self.device_cpu, delta)
+        np.testing.assert_array_almost_equal(result, expected)
+
+    def test_log_cosh_loss(self):
+        y_true = np.array([1, 2, 3])
+        y_pred = np.array([2, 2, 4])
+        error = y_pred - y_true
+        expected = np.mean(np.log(np.cosh(error)))
+        result = log_cosh_loss(y_true, y_pred, self.device_cpu)
+        self.assertAlmostEqual(result, expected)
+
+    def test_log_cosh_loss_derivative(self):
+        y_true = np.array([1.0, 2.0, 3.0])
+        y_pred = np.array([1.5, 1.7, 2.5])
+        error = y_pred - y_true
+        expected = np.tanh(error)
+        result = log_cosh_loss_derivative(y_true, y_pred, self.device_cpu)
         np.testing.assert_array_almost_equal(result, expected)
 
 if __name__ == "__main__":
