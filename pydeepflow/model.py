@@ -290,6 +290,81 @@ class Flatten:
         original_shape = self.cache
         return dOut.reshape(original_shape)
 
+class MaxPooling2D:
+    """A Max Pooling layer for 2D inputs."""
+    def __init__(self, pool_size=(2, 2), stride=2):
+        self.pool_height, self.pool_width = pool_size
+        self.stride = stride
+        self.cache = {}
+        self.params = {}
+        self.grads = {}
+
+    def forward(self, X):
+        self.cache['X'] = X
+        N, H, W, C = X.shape
+        out_h = (H - self.pool_height) // self.stride + 1
+        out_w = (W - self.pool_width) // self.stride + 1
+        out = np.zeros((N, out_h, out_w, C))
+        for i in range(out_h):
+            for j in range(out_w):
+                h_start, h_end = i * self.stride, i * self.stride + self.pool_height
+                w_start, w_end = j * self.stride, j * self.stride + self.pool_width
+                window = X[:, h_start:h_end, w_start:w_end, :]
+                out[:, i, j, :] = np.max(window, axis=(1, 2))
+        return out
+
+    def backward(self, dOut):
+        X = self.cache['X']
+        N, H, W, C = X.shape
+        _, out_h, out_w, _ = dOut.shape
+        dX = np.zeros_like(X)
+        for n in range(N):
+            for c in range(C):
+                for i in range(out_h):
+                    for j in range(out_w):
+                        h_start, h_end = i * self.stride, i * self.stride + self.pool_height
+                        w_start, w_end = j * self.stride, j * self.stride + self.pool_width
+                        window = X[n, h_start:h_end, w_start:w_end, c]
+                        mask = (window == np.max(window))
+                        dX[n, h_start:h_end, w_start:w_end, c] += mask * dOut[n, i, j, c]
+        return dX
+
+class AveragePooling2D:
+    """An Average Pooling layer for 2D inputs."""
+    def __init__(self, pool_size=(2, 2), stride=2):
+        self.pool_height, self.pool_width = pool_size
+        self.stride = stride
+        self.cache = {}
+        self.params = {}
+        self.grads = {}
+
+    def forward(self, X):
+        self.cache['X_shape'] = X.shape
+        N, H, W, C = X.shape
+        out_h = (H - self.pool_height) // self.stride + 1
+        out_w = (W - self.pool_width) // self.stride + 1
+        out = np.zeros((N, out_h, out_w, C))
+        for i in range(out_h):
+            for j in range(out_w):
+                h_start, h_end = i * self.stride, i * self.stride + self.pool_height
+                w_start, w_end = j * self.stride, j * self.stride + self.pool_width
+                window = X[:, h_start:h_end, w_start:w_end, :]
+                out[:, i, j, :] = np.mean(window, axis=(1, 2))
+        return out
+
+    def backward(self, dOut):
+        X_shape = self.cache['X_shape']
+        _, out_h, out_w, _ = dOut.shape
+        dX = np.zeros(X_shape)
+        pool_area = self.pool_height * self.pool_width
+        for i in range(out_h):
+            for j in range(out_w):
+                h_start, h_end = i * self.stride, i * self.stride + self.pool_height
+                w_start, w_end = j * self.stride, j * self.stride + self.pool_width
+                grad = dOut[:, i, j, :][:, np.newaxis, np.newaxis, :]
+                dX[:, h_start:h_end, w_start:w_end, :] += grad / pool_area
+        return dX
+
 
 # ====================================================================
 # Multi_Layer_ANN (Dense-only training logic) - UNMODIFIED
@@ -1251,119 +1326,84 @@ class Multi_Layer_CNN:
     A Sequential Model wrapper that chains Convolutional, Flatten, and Dense layers.
     It implements end-to-end forward propagation and backpropagation for CNN training.
     """
-    def __init__(self, layers_list, X_train, Y_train, activations, loss='categorical_crossentropy',
-                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, use_batch_norm=False, optimizer='sgd'):
-        
-        # Validate inputs before proceeding with initialization
-        validator = ModelValidator(device=None)  # Device not needed for validation
-        # --- CNN-specific validation: enforce 4D input for images ---
+
+    def __init__(self, layers_list, X_train, Y_train, loss='categorical_crossentropy',
+                 use_gpu=False, l2_lambda=0.0, dropout_rate=0.0, optimizer='sgd'):
+
+        validator = ModelValidator()
         validator.validate_training_data(X_train, "X_train", max_dimensions=4)
         if np.asarray(X_train).ndim != 4:
             raise ValueError("X_train must be a 4D array (N, H, W, C) for CNN models.")
-        validator.validate_training_data(Y_train, "Y_train", max_dimensions=2)  # Labels are typically 1D or 2D
+        validator.validate_training_data(Y_train, "Y_train", max_dimensions=2)
         validator.validate_data_compatibility(X_train, Y_train)
         validator.validate_cnn_layers(layers_list)
-        validator.validate_cnn_input_data(X_train, layers_list)
         validator.validate_loss_function(loss)
         validator.validate_regularization_params(l2_lambda, dropout_rate)
         validator.validate_optimizer(optimizer)
-        
+
         self.device = Device(use_gpu=use_gpu)
         self.regularization = Regularization(l2_lambda, dropout_rate)
-        
-        # Loss setup
+
         self.loss = loss
         self.loss_func = get_loss_function(self.loss)
         self.loss_derivative = get_loss_derivative(self.loss)
 
-        # Data and state setup
         self.X_train = self.device.array(X_train)
         self.y_train = self.device.array(Y_train)
         self.training = False
         self.history = {'train_loss': [], 'val_loss': [], 'train_accuracy': [], 'val_accuracy': []}
 
-        self.layers_list = []  # Stores ConvLayer/Flatten objects and Dense dicts
-        self.trainable_params = []  # List of W/b arrays for optimization (Conv W, Conv b, Dense W, Dense b,...)
-        
-        # --- 1. Construct Layers and Initialize Weights ---
-        
-        current_input_shape = X_train.shape[1:]  # (H, W, C) or (Features,)
-        
+        self.layers_list = []
+        self.trainable_params = []
+
+        current_input_shape = X_train.shape[1:]  # (H, W, C)
+
         for layer_config in layers_list:
             layer_type = layer_config['type'].lower()
-            
+
             if layer_type == 'conv':
-                if len(current_input_shape) != 3:
-                    raise ValueError("ConvLayer requires 4D input (N, H, W, C). Check previous layer configuration.")
-
                 in_c = current_input_shape[-1]
-                out_c = layer_config['out_channels']
-                k_size = layer_config['kernel_size']
-                stride = layer_config.get('stride', 1)
-                padding = layer_config.get('padding', 0)
-
-                # --- CNN-specific weight initialization: He/Kaiming for Conv ---
-                # (Already used in ConvLayer by default, but can be extended here)
-                conv_layer = ConvLayer(in_c, out_c, k_size, stride, padding, device=self.device)
+                conv_layer = ConvLayer(in_channels=in_c, out_channels=layer_config['out_channels'], kernel_size=layer_config['kernel_size'], stride=layer_config.get('stride', 1), padding=layer_config.get('padding', 0), device=self.device)
                 self.layers_list.append(conv_layer)
-
-                # Update current shape for the next layer
-                H, W = current_input_shape[0], current_input_shape[1]
-                H_out = (H + 2 * padding - k_size) // stride + 1
-                W_out = (W + 2 * padding - k_size) // stride + 1
-                current_input_shape = (H_out, W_out, out_c)
-
-                # Add ConvLayer parameters to the trainable list
+                H, W, _ = current_input_shape
+                k, s, p = conv_layer.Fh, conv_layer.stride, conv_layer.padding
+                out_h, out_w = (H + 2*p - k)//s + 1, (W + 2*p - k)//s + 1
+                current_input_shape = (out_h, out_w, conv_layer.out_channels)
                 self.trainable_params.extend([conv_layer.params['W'], conv_layer.params['b']])
 
+            elif layer_type == 'maxpool':
+                pool_size, stride = layer_config.get('pool_size', (2, 2)), layer_config.get('stride', 2)
+                self.layers_list.append(MaxPooling2D(pool_size=pool_size, stride=stride))
+                H, W, C = current_input_shape
+                out_h, out_w = (H - pool_size[0])//stride + 1, (W - pool_size[1])//stride + 1
+                current_input_shape = (out_h, out_w, C)
+
+            elif layer_type == 'avgpool':
+                pool_size, stride = layer_config.get('pool_size', (2, 2)), layer_config.get('stride', 2)
+                self.layers_list.append(AveragePooling2D(pool_size=pool_size, stride=stride))
+                H, W, C = current_input_shape
+                out_h, out_w = (H - pool_size[0])//stride + 1, (W - pool_size[1])//stride + 1
+                current_input_shape = (out_h, out_w, C)
+
             elif layer_type == 'flatten':
-                if len(current_input_shape) < 3:
-                    raise ValueError("Flatten layer expects 4D input (N, H, W, C).")
-                
-                flatten_layer = Flatten()
-                self.layers_list.append(flatten_layer)
-                
-                current_input_dim = np.prod(current_input_shape)
-                current_input_shape = (current_input_dim,) # New 2D shape
+                self.layers_list.append(Flatten())
+                current_input_shape = (np.prod(current_input_shape),)
 
             elif layer_type == 'dense':
-                if len(current_input_shape) != 1:
-                    raise ValueError("DenseLayer expects 2D input (N, Features). Needs Flatten layer before.")
-
-                input_dim = current_input_shape[0]
-                output_dim = layer_config['neurons']
-                activation_name = layer_config['activation']
-
-                # --- CNN-specific weight initialization for Dense layers ---
-                # Use Xavier/Glorot for tanh/softmax, He for relu/variants
-                if activation_name in ['relu', 'leaky_relu', 'prelu', 'elu', 'gelu', 'selu', 'mish', 'rrelu', 'hardswish']:
-                    scale = np.sqrt(2 / max(1, input_dim))  # He initialization
-                else:
-                    scale = np.sqrt(1 / max(1, input_dim))  # Xavier/Glorot for others
-                w = self.device.random().randn(input_dim, output_dim) * scale
-                b = self.device.zeros((1, output_dim))
-
-                dense_layer = {'W': w, 'b': b, 'activation': activation_name}
+                input_dim, output_dim, activation_name = current_input_shape[0], layer_config['neurons'], layer_config['activation']
+                initializer = WeightInitializer(device=self.device, mode='auto', bias_init='auto')
+                w, b, _ = initializer.initialize_dense_layer(input_dim, output_dim, activation_name)
+                dense_layer = {'W': self.device.array(w), 'b': self.device.array(b.reshape(1, -1)), 'activation': activation_name}
                 self.layers_list.append(dense_layer)
-
                 current_input_shape = (output_dim,)
-
-                # Add Dense layer parameters to the trainable list
                 self.trainable_params.extend([dense_layer['W'], dense_layer['b']])
 
-        # Final output settings (for loss function)
         self.output_dim = Y_train.shape[1] if Y_train.ndim > 1 else 1
-        # Use the activation of the final dense layer config, but override the output layer if necessary
-        final_layer_activation = layers_list[-1].get('activation', 'relu') if layers_list else 'relu'
         self.output_activation = 'softmax' if self.output_dim > 1 else 'sigmoid'
 
-        # --- 2. Optimizer Setup ---
-        if optimizer == 'adam':
-            self.optimizer = Adam()
-        elif optimizer == 'rmsprop':
-            self.optimizer = RMSprop()
-        else:
-            self.optimizer = None # Default to SGD
+        if optimizer == 'adam': self.optimizer = Adam()
+        elif optimizer == 'rmsprop': self.optimizer = RMSprop()
+        else: self.optimizer = None
 
     def forward_propagation(self, X):
         """
@@ -1376,7 +1416,7 @@ class Multi_Layer_CNN:
         A_values = [X]  # Stores all activation outputs (A0 = Input, A1, A2...)
 
         for layer_idx, layer in enumerate(self.layers_list):
-            if isinstance(layer, ConvLayer):
+            if isinstance(layer, (ConvLayer, Flatten, MaxPooling2D, AveragePooling2D)):
                 # --- ConvLayer forward ---
                 current_activation = layer.forward(current_activation)
                 A_values.append(current_activation)
@@ -1431,8 +1471,7 @@ class Multi_Layer_CNN:
                 grads_to_update.insert(0, layer.grads['dW'])  # Insert weights second
                 dOut = dIn  # Gradient for the previous layer (Flatten or another Conv)
 
-            elif isinstance(layer, Flatten):
-                # --- Flatten backward: reshapes gradient for previous Conv layer ---
+            elif isinstance(layer, (Flatten, MaxPooling2D, AveragePooling2D)):
                 dIn = layer.backward(dOut)
                 dOut = dIn
 

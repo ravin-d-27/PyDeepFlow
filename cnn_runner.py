@@ -30,8 +30,7 @@ def load_and_preprocess_digits():
     )
     return X_train, y_train, X_test, y_test
 
-
-# --- CNN Model Demo (Uses Multi_Layer_CNN) ---
+# --- MAIN EXECUTION ---
 if __name__ == "__main__":
 
     print("Loading and preparing Digits dataset...")
@@ -44,18 +43,20 @@ if __name__ == "__main__":
     y_train = y_train[:-100]
 
     # --- DEFINE THE FULL SEQUENTIAL ARCHITECTURE ---
-    # Conv -> Conv -> Flatten -> Dense -> Dense
+    # Conv -> Pool -> Conv -> Pool -> Flatten -> Dense -> Dense
     cnn_layers_config = [
         # First convolutional layer: 8x8x1 -> 6x6x16
         {'type': 'conv', 'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 0},
+        # Pooling layer: 6x6x16 -> 3x3x16
+        {'type': 'maxpool', 'pool_size': 2, 'stride': 2},
         
-        # Second convolutional layer: 6x6x16 -> 4x4x32  
+        # Second convolutional layer: 3x3x16 -> 1x1x32
         {'type': 'conv', 'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 0},
         
-        # Flatten: 4x4x32 -> 512
+        # Flatten: 1x1x32 -> 32
         {'type': 'flatten'},
         
-        # First dense layer: 512 -> 64
+        # First dense layer: 32 -> 64
         {'type': 'dense', 'neurons': 64, 'activation': 'relu'},
         
         # Output layer: 64 -> 10 (digits 0-9)
@@ -64,11 +65,12 @@ if __name__ == "__main__":
 
     print("\nInitializing Multi_Layer_CNN Model...")
     
-    # Instantiate the new integrated model
+    # Instantiate the new integrated model with the 'activations' argument
     model = Multi_Layer_CNN(
         layers_list=cnn_layers_config,
         X_train=X_train,
         Y_train=y_train,
+        activations=['relu', 'relu', 'relu', 'softmax'],
         loss='categorical_crossentropy',
         optimizer='adam'
     )
@@ -91,7 +93,7 @@ if __name__ == "__main__":
         y_pred_classes = np.argmax(y_pred, axis=1)
         y_true_classes = np.argmax(y_test, axis=1)
         test_accuracy = accuracy_score(y_true_classes, y_pred_classes) * 100
-        print(f"\n705 Final Test Accuracy: {test_accuracy:.2f}%")
+        print(f"\nFinal Test Accuracy: {test_accuracy:.2f}%")
         # Optional: plot training history
         plot_util = Plotting_Utils()
         plot_util.plot_training_history(model.history, metrics=('loss', 'accuracy'), figure='training_history.png')
