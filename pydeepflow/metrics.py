@@ -157,3 +157,23 @@ def r2_score(y_true, y_pred):
     ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
     return 1 - (ss_res / ss_tot)
 
+def root_mean_squared_error(y_true, y_pred):
+    """
+    Calculates the Root Mean Squared Error (RMSE).
+
+    RMSE = sqrt((1/n) * Σ(y_true - y_pred)^2)
+
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth (correct) target values.
+    y_pred : array-like
+        Estimated target values.
+
+    Returns
+    -------
+    float
+        The RMSE score.
+    """
+    return ((np.array(y_true) - np.array(y_pred)) ** 2).mean() ** 0.5
+    

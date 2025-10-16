@@ -2,7 +2,8 @@ import unittest
 import numpy as np
 from pydeepflow.metrics import (
     precision_score, recall_score, f1_score, confusion_matrix,
-    mean_absolute_error, mean_squared_error, r2_score
+    mean_absolute_error, mean_squared_error, r2_score,root_mean_squared_error  
+
 )
 
 class TestMetrics(unittest.TestCase):
@@ -53,6 +54,24 @@ class TestMetrics(unittest.TestCase):
         #        = 0.015625 + 11.390625 + 0.765625 + 17.015625 = 29.1875
         # R^2 = 1 - (1.5 / 29.1875) = 1 - 0.051389... approx 0.9486
         self.assertAlmostEqual(r2_score(self.y_true_reg, self.y_pred_reg), 0.94861051, places=5)
+
+
+    def test_root_mean_squared_error(self):
+        # Step 1: Differences
+        # (3 - 2.5) = 0.5
+        # (-0.5 - 0.0) = -0.5
+        # (2 - 2) = 0
+        # (7 - 8) = -1
+        #
+        # Step 2: Squared differences
+        # [0.5², (-0.5)², 0², (-1)²] = [0.25, 0.25, 0, 1]
+        #
+        # Step 3: Mean Squared Error (MSE)
+        # (0.25 + 0.25 + 0 + 1) / 4 = 0.375
+        #
+        # Step 4: Root Mean Squared Error (RMSE)
+        # sqrt(0.375) = 0.6123724356957945
+        self.assertAlmostEqual(root_mean_squared_error(self.y_true_reg, self.y_pred_reg), 0.6123724356957945, places=6)
 
 if __name__ == '__main__':
     unittest.main()
