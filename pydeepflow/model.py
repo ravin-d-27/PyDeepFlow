@@ -1642,7 +1642,8 @@ class Multi_Layer_CNN:
         if 'r2_score' in metrics:
             results['r2_score'] = r2_score(y, predictions)    
         
-        if 'root_mean_squared_error' in metrics:results['root_mean_squared_error'] = root_mean_squared_error(y, predictions)
+        if 'root_mean_squared_error' in metrics:
+            results['root_mean_squared_error'] = root_mean_squared_error(y, predictions)
 
         return results # Removed confusion_matrix for simplification/dependency reasons
 
