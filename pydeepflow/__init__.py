@@ -11,6 +11,7 @@ from .batch_normalization import BatchNormalization
 from .gridSearch import GridSearchCV
 from .validation import ModelValidator
 from .introspection import ANNIntrospector, CNNIntrospector, ModelSummaryFormatter, create_introspector
+from .preprocessing import ImageDataGenerator
 
 # Try to import optional components
 try:
@@ -45,6 +46,7 @@ __all__ = [
     "CNNIntrospector",
     "ModelSummaryFormatter",
     "create_introspector",
+    "ImageDataGenerator",
 ]
 
 # Add optional components to __all__ if available
