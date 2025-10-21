@@ -24,7 +24,7 @@ setup(
     install_requires=[
         "numpy>=1.23.5",  
         "pandas>=1.5.3",
-        "scikit-learn>=1.2.0",
+        "scikit-learn>=1.3.0",
         "jupyter>=1.0.0",
         "tqdm>=4.64.1",
         "colorama>=0.4.6",
