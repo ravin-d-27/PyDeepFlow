@@ -169,7 +169,7 @@ def root_mean_squared_error(y_true, y_pred):
         Ground truth (correct) target values.
     y_pred : array-like
         Estimated target values.
-
+    
     Returns
     -------
     float

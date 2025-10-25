@@ -212,6 +212,48 @@ def huber_loss_derivative(y_true, y_pred, device, delta=1.0):
     is_small_error = device.abs(error) <= delta
     return device.where(is_small_error, error, delta * device.sign(error))
 
+def log_cosh_loss(y_true, y_pred, device):
+    """
+    Computes the Log-Cosh loss for regression tasks.
+
+    Parameters:
+    -----------
+    y_true : np.ndarray or cp.ndarray
+        Ground truth values.
+    y_pred : np.ndarray or cp.ndarray
+        Predicted values.
+    device : Device
+        The device instance (CPU or GPU) to perform calculations.
+
+    Returns:
+    --------
+    float
+        The Log-Cosh loss.
+    """
+    error = y_pred - y_true
+    return device.mean(device.log(device.cosh(error)))
+
+def log_cosh_loss_derivative(y_true, y_pred, device):
+    """
+    Computes the derivative of the Log-Cosh loss.
+
+    Parameters:
+    -----------
+    y_true : np.ndarray or cp.ndarray
+        Ground truth values.
+    y_pred : np.ndarray or cp.ndarray
+        Predicted values.
+    device : Device
+        The device instance (CPU or GPU) to perform calculations.
+
+    Returns:
+    --------
+    np.ndarray or cp.ndarray
+        The derivative of the Log-Cosh loss with respect to predictions.
+    """
+    error = y_pred - y_true
+    return device.tanh(error)
+
 # Get the appropriate loss function
 def get_loss_function(loss_name):
     """
@@ -242,6 +284,8 @@ def get_loss_function(loss_name):
         return hinge_loss
     elif loss_name == 'huber':
         return huber_loss
+    elif loss_name == 'log_cosh':
+        return log_cosh_loss
     else:
         raise ValueError(f"Unsupported loss function: {loss_name}")
 
@@ -275,5 +319,7 @@ def get_loss_derivative(loss_name):
         return hinge_loss_derivative
     elif loss_name == 'huber':
         return huber_loss_derivative
+    elif loss_name == 'log_cosh':
+        return log_cosh_loss_derivative
     else:
         raise ValueError(f"Unsupported loss derivative: {loss_name}")
