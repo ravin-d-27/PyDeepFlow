@@ -4,7 +4,7 @@ import time
 import matplotlib.pyplot as plt
 from pydeepflow.activations import activation, activation_derivative
 from pydeepflow.losses import get_loss_function, get_loss_derivative
-from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix,mean_absolute_error, mean_squared_error, r2_score
+from pydeepflow.metrics import precision_score, recall_score, f1_score, confusion_matrix,mean_absolute_error, mean_squared_error, r2_score, root_mean_squared_error
 from pydeepflow.device import Device
 from pydeepflow.regularization import Regularization
 from pydeepflow.checkpoints import ModelCheckpoint
@@ -817,7 +817,7 @@ class Multi_Layer_ANN:
             y (np.ndarray): The true labels for evaluation.
             metrics (list, optional): A list of metrics to calculate.
                                       Defaults to ['loss', 'accuracy'].
-                                      Available metrics: 'loss', 'accuracy', 'precision', 'recall', 'f1_score', 'confusion_matrix'.
+                                      Available metrics: 'loss', 'accuracy', 'precision', 'recall', 'f1_score', 'confusion_matrix', 'root_mean_squared_error'.
 
         Returns:
             dict: A dictionary where keys are the metric names and values are the computed scores.
@@ -855,6 +855,9 @@ class Multi_Layer_ANN:
 
         if 'r2_score' in metrics:
          results['r2_score'] = r2_score(y, predictions)
+
+        if 'root_mean_squared_error' in metrics:
+            results['root_mean_squared_error'] = root_mean_squared_error(y, predictions)
 
 
 
@@ -1740,6 +1743,9 @@ class Multi_Layer_CNN:
 
         if 'r2_score' in metrics:
             results['r2_score'] = r2_score(y, predictions)    
+        
+        if 'root_mean_squared_error' in metrics:
+            results['root_mean_squared_error'] = root_mean_squared_error(y, predictions)
 
         return results # Removed confusion_matrix for simplification/dependency reasons
 
