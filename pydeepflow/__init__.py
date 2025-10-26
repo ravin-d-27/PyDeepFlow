@@ -26,6 +26,21 @@ try:
 except ImportError:
     _has_cnn = False
 
+# Try to import pretrained models and transfer learning utilities
+try:
+    from .pretrained import VGG16
+    from .transfer_learning import (
+        TransferLearningManager,
+        freeze_layers,
+        unfreeze_layers,
+        get_layer_info,
+        calculate_trainable_params,
+        print_transfer_learning_guide
+    )
+    _has_pretrained = True
+except ImportError:
+    _has_pretrained = False
+
 __all__ = [
     "activation",
     "activation_derivative",
@@ -55,3 +70,14 @@ if _has_weight_init:
 
 if _has_cnn:
     __all__.extend(["ConvLayer", "Flatten", "Multi_Layer_CNN"])
+
+if _has_pretrained:
+    __all__.extend([
+        "VGG16",
+        "TransferLearningManager",
+        "freeze_layers",
+        "unfreeze_layers",
+        "get_layer_info",
+        "calculate_trainable_params",
+        "print_transfer_learning_guide"
+    ])

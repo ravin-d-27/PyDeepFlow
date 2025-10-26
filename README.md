@@ -159,6 +159,128 @@ regression_results = ann_regression.evaluate(
 print(regression_results)
 
 
+## **Transfer Learning with VGG16** 🚀
+
+PyDeepFlow now supports **transfer learning** with the VGG16 architecture! This powerful feature allows you to leverage pretrained deep learning models for your custom computer vision tasks.
+
+### **What is VGG16?**
+
+VGG16 is a deep convolutional neural network with 16 layers (13 convolutional + 3 fully connected) that was developed by the Visual Geometry Group at Oxford. It's widely used for image classification and feature extraction tasks.
+
+### **Quick Start with VGG16**
+
+```python
+from pydeepflow.pretrained import VGG16
+from pydeepflow.transfer_learning import TransferLearningManager
+import numpy as np
+
+# Load VGG16 for your custom dataset (e.g., 10 classes)
+vgg = VGG16(num_classes=10, freeze_features=True)
+
+# Display architecture
+vgg.summary()
+
+# Use Transfer Learning Manager for structured workflow
+manager = TransferLearningManager(vgg)
+
+# Phase 1: Feature Extraction (train only classifier)
+manager.setup_feature_extraction()
+# Train your model here with frozen conv layers...
+
+# Phase 2: Fine-Tuning (unfreeze last conv block)
+manager.setup_fine_tuning(num_layers=3)
+# Continue training with unfrozen layers...
+```
+
+### **Transfer Learning Workflows**
+
+#### **1. Feature Extraction (Small Datasets)**
+Best for datasets with < 1000 samples:
+
+```python
+# Freeze all convolutional layers
+vgg = VGG16(num_classes=5, freeze_features=True)
+
+# Train only the classifier
+# Recommended: 10-20 epochs, LR = 1e-2
+```
+
+#### **2. Fine-Tuning (Medium to Large Datasets)**
+Best for datasets with > 1000 samples:
+
+```python
+# Start with frozen features
+vgg = VGG16(num_classes=10, freeze_features=True)
+# Train classifier first...
+
+# Then unfreeze last conv block for fine-tuning
+vgg.unfreeze_layers(num_layers=3)
+# Continue training with lower LR (1e-3 to 1e-4)
+```
+
+#### **3. Feature Extraction Only**
+Use VGG16 as a feature extractor for other classifiers:
+
+```python
+# Create VGG16 without classifier layers
+vgg_features = VGG16(include_top=False)
+
+# Extract features
+features = vgg_features.predict(X_images)
+
+# Use features with SVM, Random Forest, or custom classifier
+```
+
+### **Key Features**
+
+- ✅ **Full VGG16 Architecture**: 13 conv layers + 3 FC layers
+- ✅ **Layer Freezing/Unfreezing**: Fine-grained control over trainable layers
+- ✅ **Transfer Learning Manager**: Structured workflow for best practices
+- ✅ **Weight Save/Load**: Save and load pretrained weights
+- ✅ **GPU Support**: Accelerate training with CUDA
+- ✅ **Progressive Unfreezing**: Gradually unfreeze layers to prevent catastrophic forgetting
+
+### **Advanced Usage**
+
+```python
+from pydeepflow.transfer_learning import (
+    calculate_trainable_params,
+    print_transfer_learning_guide
+)
+
+# Get detailed parameter information
+params = calculate_trainable_params(vgg)
+print(f"Trainable: {params['trainable']:,} / {params['total']:,}")
+
+# Display best practices guide
+print_transfer_learning_guide()
+
+# Progressive unfreezing strategy
+manager = TransferLearningManager(vgg)
+stages = manager.progressive_unfreeze(stages=3)
+
+for stage_info in stages:
+    vgg.unfreeze_layers(num_layers=stage_info['layers_to_unfreeze'])
+    # Train with recommended learning rate...
+```
+
+### **Examples**
+
+Check out the `examples/vgg16_transfer_learning.py` file for comprehensive examples including:
+- Basic VGG16 usage
+- Feature extraction workflow
+- Fine-tuning strategies
+- Progressive unfreezing
+- Feature extraction without classifier
+
+### **Tests**
+
+Run VGG16 tests to verify functionality:
+
+```bash
+python -m pytest tests/test_vgg16.py -v
+```
+
 ## **GPU and CPU Support**
 
 `PyDeepFlow` is designed to be flexible and can run on both CPUs and NVIDIA GPUs.
